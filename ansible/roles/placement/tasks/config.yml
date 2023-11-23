@@ -55,6 +55,7 @@
   merge_configs:
     sources:
       - "{{ role_path }}/templates/placement.conf.j2"
+      - "{{ role_path }}/../cache/templates/cache.conf.j2"
       - "{{ node_custom_config }}/global.conf"
       - "{{ node_custom_config }}/placement.conf"
       - "{{ node_custom_config }}/placement/{{ item.key }}.conf"

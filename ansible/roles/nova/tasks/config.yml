@@ -68,6 +68,7 @@
   merge_configs:
     sources:
       - "{{ role_path }}/templates/nova.conf.j2"
+      - "{{ role_path }}/../cache/templates/cache.conf.j2"
       - "{{ node_custom_config }}/global.conf"
       - "{{ node_custom_config }}/nova.conf"
       - "{{ node_custom_config }}/nova/{{ item.key }}.conf"

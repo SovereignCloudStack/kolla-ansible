@@ -100,6 +100,11 @@ database_max_pool_size: 1
 kolla_container_engine: "docker"
 
 ####################
+# Cache
+####################
+kolla_caching_backend: "{{ 'redis' if enable_redis | bool else 'memcached' }}"
+
+####################
 # Docker options
 ####################
 docker_registry_email:
