@@ -27,7 +27,7 @@ workers = {{ senlin_conductor_workers }}
 {% endif %}
 
 [database]
-connection = mysql+pymysql://{{ senlin_database_user }}:{{ senlin_database_password }}@{{ senlin_database_address }}/{{ senlin_database_name }}
+connection = mysql+pymysql://{{ senlin_database_user }}:{{ senlin_database_password }}@{{ senlin_database_address }}/{{ senlin_database_name }}{{ '?ssl_ca=/var/lib/' ~ project_name ~ '/' ~  mariadb_tls_ca if mariadb_enable_tls | bool }}
 connection_recycle_time = {{ database_connection_recycle_time }}
 max_pool_size = {{ database_max_pool_size }}
 max_retries = -1

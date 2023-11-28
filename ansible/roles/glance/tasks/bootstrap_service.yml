@@ -7,6 +7,7 @@
     module_args:
       login_host: "{{ database_address }}"
       login_port: "{{ database_port }}"
+      ca_cert: "{{ kolla_ansible_container_ca }}"
       login_user: "{{ glance_database_shard_root_user }}"
       login_password: "{{ database_password }}"
       variable: log_bin_trust_function_creators
@@ -43,6 +44,7 @@
     module_name: mysql_variables
     module_args:
       login_host: "{{ database_address }}"
+      ca_cert: "{{ kolla_ansible_container_ca }}"
       login_port: "{{ database_port }}"
       login_user: "{{ glance_database_shard_root_user }}"
       login_password: "{{ database_password }}"

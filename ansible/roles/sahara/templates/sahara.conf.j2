@@ -11,7 +11,7 @@ use_namespaces = True
 use_rootwrap = True
 
 [database]
-connection = mysql+pymysql://{{ sahara_database_user }}:{{ sahara_database_password }}@{{ sahara_database_address }}/{{ sahara_database_name }}
+connection = mysql+pymysql://{{ sahara_database_user }}:{{ sahara_database_password }}@{{ sahara_database_address }}/{{ sahara_database_name }}{{ '?ssl_ca=/var/lib/' ~ project_name ~ '/' ~  mariadb_tls_ca if mariadb_enable_tls | bool }}
 connection_recycle_time = {{ database_connection_recycle_time }}
 max_pool_size = {{ database_max_pool_size }}
 

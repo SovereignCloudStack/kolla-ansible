@@ -63,6 +63,9 @@
   when:
     - enable_mariabackup | bool
     - inventory_hostname == mariadb_backup_host
+- include_tasks: copy-certs.yml
+  when:
+    - kolla_copy_ca_into_containers | bool or mariadb_enable_tls | bool
 
 - name: Copying over galera.cnf
   vars:

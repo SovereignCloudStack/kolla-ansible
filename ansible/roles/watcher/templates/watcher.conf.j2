@@ -13,7 +13,7 @@ workers = {{ watcher_api_workers }}
 {% endif %}
 
 [database]
-connection = mysql+pymysql://{{ watcher_database_user }}:{{ watcher_database_password }}@{{ watcher_database_address }}/{{ watcher_database_name }}
+connection = mysql+pymysql://{{ watcher_database_user }}:{{ watcher_database_password }}@{{ watcher_database_address }}/{{ watcher_database_name }}{{ '?ssl_ca=/var/lib/' ~ project_name ~ '/' ~  mariadb_tls_ca if mariadb_enable_tls | bool }}
 connection_recycle_time = {{ database_connection_recycle_time }}
 max_pool_size = {{ database_max_pool_size }}
 max_retries = -1

@@ -42,7 +42,7 @@ port = {{ solum_image_builder_public_endpoint }}
 host = {{ ansible_facts.hostname }}_{{ item }}
 
 [database]
-connection = mysql+pymysql://{{ solum_database_user }}:{{ solum_database_password }}@{{ solum_database_address }}/{{ solum_database_name }}
+connection = mysql+pymysql://{{ solum_database_user }}:{{ solum_database_password }}@{{ solum_database_address }}/{{ solum_database_name }}{{ '?ssl_ca=/var/lib/' ~ project_name ~ '/' ~  mariadb_tls_ca if mariadb_enable_tls | bool }}
 connection_recycle_time = {{ database_connection_recycle_time }}
 max_pool_size = {{ database_max_pool_size }}
 max_retries = -1

@@ -19,7 +19,7 @@ sandbox_image = k8s.gcr.io/pause:3.6
 driver = kuryr
 
 [database]
-connection = mysql+pymysql://{{ zun_database_user }}:{{ zun_database_password }}@{{ zun_database_address }}/{{ zun_database_name }}
+connection = mysql+pymysql://{{ zun_database_user }}:{{ zun_database_password }}@{{ zun_database_address }}/{{ zun_database_name }}{{ '?ssl_ca=/var/lib/' ~ project_name ~ '/' ~  mariadb_tls_ca if mariadb_enable_tls | bool }}
 connection_recycle_time = {{ database_connection_recycle_time }}
 max_pool_size = {{ database_max_pool_size }}
 max_retries = -1

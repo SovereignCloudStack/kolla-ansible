@@ -38,7 +38,7 @@ client_cert = /etc/octavia/certs/client.cert-and-key.pem
 bind_port = {{ octavia_amp_listen_port }}
 
 [database]
-connection = mysql+pymysql://{{ octavia_database_user }}:{{ octavia_database_password }}@{{ octavia_database_address }}/{{ octavia_database_name }}
+connection = mysql+pymysql://{{ octavia_database_user }}:{{ octavia_database_password }}@{{ octavia_database_address }}/{{ octavia_database_name }}{{ '?ssl_ca=/var/lib/' ~ project_name ~ '/' ~  mariadb_tls_ca if mariadb_enable_tls | bool }}
 connection_recycle_time = {{ database_connection_recycle_time }}
 max_pool_size = {{ database_max_pool_size }}
 max_retries = -1
@@ -154,7 +154,7 @@ ca_certificates_file = {{ openstack_cacert }}
 {% if enable_octavia_jobboard %}
 
 [task_flow]
-persistence_connection = mysql+pymysql://{{ octavia_persistence_database_user }}:{{ octavia_persistence_database_password }}@{{ octavia_persistence_database_address }}/{{ octavia_persistence_database_name }}
+persistence_connection = mysql+pymysql://{{ octavia_persistence_database_user }}:{{ octavia_persistence_database_password }}@{{ octavia_persistence_database_address }}/{{ octavia_persistence_database_name }}{{ '?ssl_ca=/var/lib/' ~ project_name ~ '/' ~  mariadb_tls_ca if mariadb_enable_tls | bool }}
 jobboard_enabled = true
 jobboard_backend_password = "{{ redis_master_password }}"
 jobboard_backend_port = "{{ redis_port }}"

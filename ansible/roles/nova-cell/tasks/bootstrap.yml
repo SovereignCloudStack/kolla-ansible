@@ -8,6 +8,7 @@
       login_host: "{{ nova_cell_database_address }}"
       login_port: "{{ nova_cell_database_port }}"
       login_user: "{{ nova_cell_database_admin_user }}"
+      ca_cert: "{{ kolla_ansible_container_ca }}"
       login_password: "{{ nova_cell_database_admin_password }}"
       name: "{{ nova_cell_database_name }}"
   when:
@@ -22,6 +23,7 @@
     module_args:
       login_host: "{{ nova_cell_database_address }}"
       login_port: "{{ nova_cell_database_port }}"
+      ca_cert: "{{ kolla_ansible_container_ca }}"
       login_user: "{{ nova_cell_database_admin_user }}"
       login_password: "{{ nova_cell_database_admin_password }}"
       name: "{{ nova_cell_database_user }}"

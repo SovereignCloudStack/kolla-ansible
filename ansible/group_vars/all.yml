@@ -30,6 +30,8 @@ config_owner_group: "root"
 # By default, we do not provide a filter.
 kolla_ansible_setup_filter: "{{ omit }}"
 
+kolla_ansible_ca_directory: "/etc/kolla/ca-certificates"
+kolla_ansible_container_ca: "/var/lib/ansible/certs/root.crt"
 # This variable is used as the "gather_subset" argument for the setup module.
 # For instance, if one wants to avoid collecting facts via facter:
 # kolla_ansible_setup_gather_subset: "all,!facter"
@@ -483,6 +485,14 @@ mariadb_loadbalancer: "{{ 'proxysql' if enable_proxysql | bool else 'haproxy' }}
 mariadb_shard_root_user_prefix: "root_shard_"
 mariadb_shard_backup_user_prefix: "backup_shard_"
 mariadb_shards_info: "{{ groups['mariadb'] | database_shards_info() }}"
+
+mariadb_enable_tls: "no"
+
+mariadb_tls_cert: "mariadb-cert.pem"  
+mariadb_tls_key: "mariadb-key.pem"  
+mariadb_tls_ca: "ca-certificates/root.crt"  
+mariadb_tls_mount_ca: "{{ node_config_directory }}/ca-certificates/root.crt"
+
 
 masakari_internal_fqdn: "{{ kolla_internal_fqdn }}"
 masakari_external_fqdn: "{{ kolla_external_fqdn }}"
@@ -997,6 +1007,14 @@ kolla_enable_tls_backend: "no"
 kolla_verify_tls_backend: "yes"
 kolla_tls_backend_cert: "{{ kolla_certificates_dir }}/backend-cert.pem"
 kolla_tls_backend_key: "{{ kolla_certificates_dir }}/backend-key.pem"
+
+######################
+# MariaDB TLS options
+######################
+kolla_enable_tls_mariadb: "no"
+kolla_verify_tls_mariadb: "yes"
+kolla_tls_mariadb_cert: "{{ kolla_certificates_dir }}/mariadb-cert.pem"
+kolla_tls_mariadb_key: "{{ kolla_certificates_dir }}/mariadb-key.pem"
 
 #####################
 # ACME client options

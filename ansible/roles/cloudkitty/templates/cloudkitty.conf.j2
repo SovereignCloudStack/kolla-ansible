@@ -11,7 +11,7 @@ log_file = /var/log/kolla/cloudkitty/cloudkitty-api.log
 transport_url = {{ rpc_transport_url }}
 
 [database]
-connection = mysql+pymysql://{{ cloudkitty_database_user }}:{{ cloudkitty_database_password }}@{{ cloudkitty_database_address }}/{{ cloudkitty_database_name }}
+connection = mysql+pymysql://{{ cloudkitty_database_user }}:{{ cloudkitty_database_password }}@{{ cloudkitty_database_address }}/{{ cloudkitty_database_name }}{{ '?ssl_ca=/var/lib/' ~ project_name ~ '/' ~  mariadb_tls_ca if mariadb_enable_tls | bool }}
 connection_recycle_time = {{ database_connection_recycle_time }}
 max_pool_size = {{ database_max_pool_size }}
 max_retries = -1

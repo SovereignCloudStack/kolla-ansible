@@ -8,6 +8,7 @@
       login_host: "{{ database_address }}"
       login_port: "{{ database_port }}"
       login_user: "{{ nova_database_shard_root_user }}"
+      ca_cert: "{{ kolla_ansible_container_ca }}"
       login_password: "{{ database_password }}"
       name: "{{ item }}"
   run_once: True
@@ -26,6 +27,7 @@
       login_host: "{{ database_address }}"
       login_port: "{{ database_port }}"
       login_user: "{{ nova_database_shard_root_user }}"
+      ca_cert: "{{ kolla_ansible_container_ca }}"
       login_password: "{{ database_password }}"
       name: "{{ item.database_username }}"
       password: "{{ item.database_password }}"
