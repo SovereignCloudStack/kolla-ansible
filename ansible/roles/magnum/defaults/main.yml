@@ -114,12 +114,14 @@ magnum_conductor_healthcheck:
   timeout: "{{ magnum_conductor_healthcheck_timeout }}"
 
 magnum_api_default_volumes:
+  - "{{ mariadb_tls_mount_ca ~ ':/var/lib/' ~ project_name ~ '/' ~ mariadb_tls_ca if mariadb_enable_tls | bool else '' }}"
   - "{{ node_config_directory }}/magnum-api/:{{ container_config_directory }}/:ro"
   - "/etc/localtime:/etc/localtime:ro"
   - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "{{ kolla_dev_repos_directory ~ '/magnum/magnum:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/magnum' if magnum_dev_mode | bool else '' }}"
   - "kolla_logs:/var/log/kolla/"
 magnum_conductor_default_volumes:
+  - "{{ mariadb_tls_mount_ca ~ ':/var/lib/' ~ project_name ~ '/' ~ mariadb_tls_ca if mariadb_enable_tls | bool else '' }}"
   - "{{ node_config_directory }}/magnum-conductor/:{{ container_config_directory }}/:ro"
   - "/etc/localtime:/etc/localtime:ro"
   - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"

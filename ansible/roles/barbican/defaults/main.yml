@@ -130,6 +130,7 @@ barbican_worker_healthcheck:
   timeout: "{{ barbican_worker_healthcheck_timeout }}"
 
 barbican_api_default_volumes:
+  - "{{ mariadb_tls_mount_ca ~ ':/var/lib/' ~ project_name ~ '/' ~ mariadb_tls_ca if mariadb_enable_tls | bool else '' }}"
   - "{{ node_config_directory }}/barbican-api/:{{ container_config_directory }}/:ro"
   - "/etc/localtime:/etc/localtime:ro"
   - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
@@ -137,12 +138,14 @@ barbican_api_default_volumes:
   - "kolla_logs:/var/log/kolla/"
   - "{{ kolla_dev_repos_directory ~ '/barbican/barbican:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/barbican' if barbican_dev_mode | bool else '' }}"
 barbican_keystone_listener_default_volumes:
+  - "{{ mariadb_tls_mount_ca ~ ':/var/lib/' ~ project_name ~ '/' ~ mariadb_tls_ca if mariadb_enable_tls | bool else '' }}"
   - "{{ node_config_directory }}/barbican-keystone-listener/:{{ container_config_directory }}/:ro"
   - "/etc/localtime:/etc/localtime:ro"
   - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "kolla_logs:/var/log/kolla/"
   - "{{ kolla_dev_repos_directory ~ '/barbican/barbican:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/barbican' if barbican_dev_mode | bool else '' }}"
 barbican_worker_default_volumes:
+  - "{{ mariadb_tls_mount_ca ~ ':/var/lib/' ~ project_name ~ '/' ~ mariadb_tls_ca if mariadb_enable_tls | bool else '' }}"
   - "{{ node_config_directory }}/barbican-worker/:{{ container_config_directory }}/:ro"
   - "/etc/localtime:/etc/localtime:ro"
   - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"

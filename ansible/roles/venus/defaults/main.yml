@@ -74,12 +74,14 @@ venus_api_healthcheck:
 
 venus_api_default_volumes:
   - "{{ node_config_directory }}/venus-api/:{{ container_config_directory }}/:ro"
+  - "{{ mariadb_tls_mount_ca ~ ':/var/lib/' ~ project_name ~ '/' ~ mariadb_tls_ca if mariadb_enable_tls | bool else '' }}"
   - "/etc/localtime:/etc/localtime:ro"
   - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "kolla_logs:/var/log/kolla/"
   - "{{ kolla_dev_repos_directory ~ '/venus/venus:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/venus' if venus_dev_mode | bool else '' }}"
   - "venus:/var/lib/venus/"
 venus_manager_default_volumes:
+  - "{{ mariadb_tls_mount_ca ~ ':/var/lib/' ~ project_name ~ '/' ~ mariadb_tls_ca if mariadb_enable_tls | bool else '' }}"
   - "{{ node_config_directory }}/venus-manager/:{{ container_config_directory }}/:ro"
   - "/etc/localtime:/etc/localtime:ro"
   - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"

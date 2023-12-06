@@ -56,7 +56,12 @@ innodb_buffer_pool_size = '8192M'
 
 [server]
 pid-file=/var/lib/mysql/mariadb.pid
-
+{% if mariadb_enable_tls | bool %}
+ssl_cert=/var/lib/mysql/certs/{{ mariadb_tls_cert  }}
+ssl_key=/var/lib/mysql/certs/{{ mariadb_tls_key }}
+ssl_ca=/var/lib/mysql/certs/{{ mariadb_tls_ca }}
+require_secure_transport=true
+{% endif %}
 [sst]
 {% if sst_method == 'mariabackup' and api_address_family == 'ipv6' %}
 # NOTE(yoctozepto): for IPv6 we need to tweak sockopt for socat (mariabackup sst backend)

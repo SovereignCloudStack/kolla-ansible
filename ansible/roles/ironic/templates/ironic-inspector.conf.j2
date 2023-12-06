@@ -64,7 +64,7 @@ policy_file = {{ ironic_policy_file }}
 {% endif %}
 
 [database]
-connection = mysql+pymysql://{{ ironic_inspector_database_user }}:{{ ironic_inspector_database_password }}@{{ ironic_inspector_database_address }}/{{ ironic_inspector_database_name }}
+connection = mysql+pymysql://{{ ironic_inspector_database_user }}:{{ ironic_inspector_database_password }}@{{ ironic_inspector_database_address }}/{{ ironic_inspector_database_name }}{{ '?ssl_ca=/var/lib/' ~ project_name ~ '/' ~  mariadb_tls_ca if mariadb_enable_tls | bool }}
 connection_recycle_time = {{ database_connection_recycle_time }}
 max_pool_size = {{ database_max_pool_size }}
 

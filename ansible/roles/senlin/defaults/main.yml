@@ -154,24 +154,28 @@ senlin_health_manager_healthcheck:
   timeout: "{{ senlin_health_manager_healthcheck_timeout }}"
 
 senlin_api_default_volumes:
+  - "{{ mariadb_tls_mount_ca ~ ':/var/lib/' ~ project_name ~ '/' ~ mariadb_tls_ca if mariadb_enable_tls | bool else '' }}"
   - "{{ node_config_directory }}/senlin-api/:{{ container_config_directory }}/:ro"
   - "/etc/localtime:/etc/localtime:ro"
   - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "kolla_logs:/var/log/kolla/"
   - "{{ kolla_dev_repos_directory ~ '/senlin/senlin:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/senlin' if senlin_dev_mode | bool else '' }}"
 senlin_conductor_default_volumes:
+  - "{{ mariadb_tls_mount_ca ~ ':/var/lib/' ~ project_name ~ '/' ~ mariadb_tls_ca if mariadb_enable_tls | bool else '' }}"
   - "{{ node_config_directory }}/senlin-conductor/:{{ container_config_directory }}/:ro"
   - "/etc/localtime:/etc/localtime:ro"
   - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "kolla_logs:/var/log/kolla/"
   - "{{ kolla_dev_repos_directory ~ '/senlin/senlin:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/senlin' if senlin_dev_mode | bool else '' }}"
 senlin_engine_default_volumes:
+  - "{{ mariadb_tls_mount_ca ~ ':/var/lib/' ~ project_name ~ '/' ~ mariadb_tls_ca if mariadb_enable_tls | bool else '' }}"
   - "{{ node_config_directory }}/senlin-engine/:{{ container_config_directory }}/:ro"
   - "/etc/localtime:/etc/localtime:ro"
   - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "kolla_logs:/var/log/kolla/"
   - "{{ kolla_dev_repos_directory ~ '/senlin/senlin:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/senlin' if senlin_dev_mode | bool else '' }}"
 senlin_health_manager_default_volumes:
+  - "{{ mariadb_tls_mount_ca ~ ':/var/lib/' ~ project_name ~ '/' ~ mariadb_tls_ca if mariadb_enable_tls | bool else '' }}"
   - "{{ node_config_directory }}/senlin-health-manager/:{{ container_config_directory }}/:ro"
   - "/etc/localtime:/etc/localtime:ro"
   - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"

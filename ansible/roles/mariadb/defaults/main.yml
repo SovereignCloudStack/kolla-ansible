@@ -80,6 +80,7 @@ mariadb_clustercheck_dimensions: "{{ default_container_dimensions }}"
 
 mariadb_default_volumes:
   - "{{ node_config_directory }}/mariadb/:{{ container_config_directory }}/:ro"
+  - "{{ node_config_directory }}/mariadb-certs/:/var/lib/mysql/certs"
   - "/etc/localtime:/etc/localtime:ro"
   - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "{{ mariadb_datadir_volume }}:/var/lib/mysql"
@@ -140,3 +141,4 @@ enable_mariadb_clustercheck: "{{ enable_haproxy }}"
 ####################
 mariadb_shard_database_user: "{% if mariadb_loadbalancer == 'haproxy' %}{{ database_user }}{% else %}{{ mariadb_shard_root_user_prefix }}{{ mariadb_shard_id | string }}{% endif %}"
 mariadb_database_shard: "{{ mariadb_shards_info }}"
+

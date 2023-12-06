@@ -20,7 +20,7 @@ workers = {{ magnum_conductor_workers }}
 {% endif %}
 
 [database]
-connection = mysql+pymysql://{{ magnum_database_user }}:{{ magnum_database_password }}@{{ magnum_database_address }}/{{ magnum_database_name }}
+connection = mysql+pymysql://{{ magnum_database_user }}:{{ magnum_database_password }}@{{ magnum_database_address }}/{{ magnum_database_name }}{{ '?ssl_ca=/var/lib/' ~ project_name ~ '/' ~  mariadb_tls_ca if mariadb_enable_tls | bool }}
 connection_recycle_time = {{ database_connection_recycle_time }}
 max_pool_size = {{ database_max_pool_size }}
 max_retries = -1

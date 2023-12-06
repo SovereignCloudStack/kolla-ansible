@@ -151,6 +151,8 @@ keystone_fernet_healthcheck:
 keystone_default_volumes:
   - "{{ node_config_directory }}/keystone/:{{ container_config_directory }}/:ro"
   - "/etc/localtime:/etc/localtime:ro"
+  #-  "{{ mariadb_tls_mount_ca ~ ':/var/lib/' ~ project_name ~ '/' ~ mariadb_tls_ca if mariadb_enable_tls | bool else '' }}"
+  - "{{ mariadb_tls_mount_ca ~ ':/var/lib/' ~ project_name ~ '/' ~ mariadb_tls_ca if mariadb_enable_tls | bool else '' }}"
   - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "{{ kolla_dev_repos_directory ~ '/keystone/keystone:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/keystone' if keystone_dev_mode | bool else '' }}"
   - "kolla_logs:/var/log/kolla/"

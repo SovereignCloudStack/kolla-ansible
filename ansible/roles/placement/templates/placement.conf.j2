@@ -12,7 +12,7 @@ enable_proxy_headers_parsing = True
 lock_path = /var/lib/placement/tmp
 
 [placement_database]
-connection = mysql+pymysql://{{ placement_database_user }}:{{ placement_database_password }}@{{ placement_database_address }}/{{ placement_database_name }}
+connection = mysql+pymysql://{{ placement_database_user }}:{{ placement_database_password }}@{{ placement_database_address }}/{{ placement_database_name }}{{ '?ssl_ca=/var/lib/' ~ project_name ~ '/' ~  mariadb_tls_ca if mariadb_enable_tls | bool }}
 connection_recycle_time = {{ database_connection_recycle_time }}
 max_overflow = 1000
 max_pool_size = {{ database_max_pool_size }}

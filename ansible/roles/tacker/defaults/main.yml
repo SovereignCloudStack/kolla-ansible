@@ -106,6 +106,7 @@ tacker_conductor_healthcheck:
   timeout: "{{ tacker_conductor_healthcheck_timeout }}"
 
 tacker_server_default_volumes:
+  - "{{ mariadb_tls_mount_ca ~ ':/var/lib/' ~ project_name ~ '/' ~ mariadb_tls_ca if mariadb_enable_tls | bool else '' }}"
   - "{{ node_config_directory }}/tacker-server/:{{ container_config_directory }}/:ro"
   - "{{ kolla_dev_repos_directory ~ '/tacker/tacker:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/tacker' if tacker_dev_mode | bool else '' }}"
   - "/etc/localtime:/etc/localtime:ro"
@@ -115,6 +116,7 @@ tacker_server_default_volumes:
   # between all instances of both Tacker services (Server, Conductor)
   - "kolla_tacker_csar_files:/var/lib/tacker/csar_files/"
 tacker_conductor_default_volumes:
+  - "{{ mariadb_tls_mount_ca ~ ':/var/lib/' ~ project_name ~ '/' ~ mariadb_tls_ca if mariadb_enable_tls | bool else '' }}"
   - "{{ node_config_directory }}/tacker-conductor/:{{ container_config_directory }}/:ro"
   - "{{ kolla_dev_repos_directory ~ '/tacker/tacker:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/tacker' if tacker_dev_mode | bool else '' }}"
   - "/etc/localtime:/etc/localtime:ro"

@@ -4,6 +4,7 @@ external_dir: "{{ kolla_certificates_dir }}/private/external"
 internal_dir: "{{ kolla_certificates_dir }}/private/internal"
 backend_dir: "{{ kolla_certificates_dir }}/private/backend"
 libvirt_dir: "{{ kolla_certificates_dir }}/private/libvirt"
+mariadb_dir: "{{ kolla_certificates_dir }}/private/mariadb"
 
 # Whether to generate certificates for libvirt TLS.
 certificates_generate_libvirt: "{{ libvirt_tls | default(false) | bool }}"

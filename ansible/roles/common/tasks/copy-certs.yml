@@ -4,3 +4,16 @@
     role: service-cert-copy
   vars:
     project_services: "{{ common_services }}"
+- name: Ensure CA directory exists
+  file:
+    state: directory
+    path: "{{ kolla_ansible_ca_directory }}"
+    mode: "0775"
+- name: "Copy CA for Ansible user"
+  become: true
+  copy:
+    src: "{{ kolla_certificates_dir }}/ca/"
+    dest: "{{ kolla_ansible_ca_directory }}"
+    mode: "0644"
+  when:
+    - kolla_copy_ca_into_containers | bool

@@ -6,6 +6,7 @@
     module_name: mysql_db
     module_args:
       login_host: "{{ database_address }}"
+      ca_cert: "{{ kolla_ansible_container_ca }}"
       login_port: "{{ database_port }}"
       login_user: "{{ keystone_database_shard_root_user }}"
       login_password: "{{ database_password }}"
@@ -23,6 +24,7 @@
     module_args:
       login_host: "{{ database_address }}"
       login_port: "{{ database_port }}"
+      ca_cert: "{{ kolla_ansible_container_ca }}"
       login_user: "{{ keystone_database_shard_root_user }}"
       login_password: "{{ database_password }}"
       name: "{{ keystone_database_user }}"

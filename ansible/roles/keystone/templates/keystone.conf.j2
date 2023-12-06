@@ -16,10 +16,12 @@ policy_file = {{ keystone_policy_file }}
 {% endif %}
 
 [database]
-connection = mysql+pymysql://{{ keystone_database_user }}:{{ keystone_database_password }}@{{ keystone_database_address }}/{{ keystone_database_name }}
+connection = mysql+pymysql://{{ keystone_database_user }}:{{ keystone_database_password }}@{{ keystone_database_address }}/{{ keystone_database_name }}{{ '?ssl_ca=/var/lib/' ~ project_name ~ '/' ~  mariadb_tls_ca if mariadb_enable_tls | bool }}
 connection_recycle_time = {{ database_connection_recycle_time }}
 max_pool_size = {{ database_max_pool_size }}
 max_retries = -1
+
+
 
 {% if keystone_domain_directory.stat.exists %}
 [identity]

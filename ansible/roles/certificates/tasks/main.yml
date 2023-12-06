@@ -2,6 +2,7 @@
 - include_tasks: generate-root.yml
 - include_tasks: generate.yml
 - include_tasks: generate-backend.yml
+- include_tasks: generate-mariadb.yml
   when:
     - kolla_enable_tls_backend | bool or rabbitmq_enable_tls | bool
 - include_tasks: generate-libvirt.yml

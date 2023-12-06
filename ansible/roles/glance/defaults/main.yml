@@ -192,6 +192,7 @@ glance_tls_proxy_healthcheck:
 
 glance_api_default_volumes:
   - "{{ node_config_directory }}/glance-api/:{{ container_config_directory }}/:ro"
+  -  "{{ mariadb_tls_mount_ca ~ ':/var/lib/' ~ project_name ~ '/' ~ mariadb_tls_ca if mariadb_enable_tls | bool else '' }}"
   - "/etc/localtime:/etc/localtime:ro"
   - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "{{ glance_file_datadir_volume }}:/var/lib/glance/"

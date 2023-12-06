@@ -47,7 +47,7 @@ user_domain_name = {{ default_user_domain_name }}
 username = {{ trove_keystone_user }}
 
 [database]
-connection = mysql+pymysql://{{ trove_database_user }}:{{ trove_database_password }}@{{ trove_database_address }}/{{ trove_database_name }}
+connection = mysql+pymysql://{{ trove_database_user }}:{{ trove_database_password }}@{{ trove_database_address }}/{{ trove_database_name }}{{ '?ssl_ca=/var/lib/' ~ project_name ~ '/' ~  mariadb_tls_ca if mariadb_enable_tls | bool }}
 connection_recycle_time = {{ database_connection_recycle_time }}
 max_pool_size = {{ database_max_pool_size }}
 max_retries = -1
