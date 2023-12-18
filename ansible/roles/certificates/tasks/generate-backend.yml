@@ -77,3 +77,17 @@
       dest: "{{ kolla_certificates_dir }}/rabbitmq-key.pem"
   when:
     - rabbitmq_enable_tls | bool
+
+- name: Copy backend TLS certificate and key for Redis
+  copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    remote_src: true
+  with_items:
+    - src: "{{ kolla_tls_backend_cert }}"
+      dest: "{{ kolla_certificates_dir }}/{{ redis_tls_certfile }}"
+    - src: "{{ kolla_tls_backend_key }}"
+      dest: "{{ kolla_certificates_dir }}/{{ redis_tls_keyfile }}"
+  when:
+    - enable_redis | bool
+    - redis_enable_tls | bool

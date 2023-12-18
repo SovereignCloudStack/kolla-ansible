@@ -99,6 +99,20 @@ database_max_pool_size: 1
 ####################
 kolla_container_engine: "docker"
 
+################
+# Memcache
+################
+memcache_servers: "{% for host in groups['memcached'] %}{{ 'api' | kolla_address(host) | put_address_in_context('memcache') }}:{{ memcached_port }}{% if not loop.last %},{% endif %}{% endfor %}"
+####################
+# Oslo Cache
+####################
+oslo_cache_enabled: "yes"
+oslo_cache_backend: "oslo_cache.memcache_pool"
+oslo_cache_memcache_servers: "{{ memcache_servers if oslo_cache_backend == 'oslo_cache.memcache_pool' else '' }}"
+oslo_cache_redis_port: "{{ redis_sentinel_tls_port if redis_enable_tls | bool else redis_sentinel_port }}"
+oslo_cache_redis_sentinel_servers: "{% for host in groups['redis'] %}{{ 'api' | kolla_address(host) | put_address_in_context('url') ~ ':' ~ oslo_cache_redis_port ~ ( ',' if  loop.revindex > 1  else  '' )  }}{% endfor %}"
+oslo_cache_redis_sentinel_service_name: "kolla"
+oslo_cache_additional_backend_arguments: {}
 ####################
 # Docker options
 ####################
@@ -619,6 +633,18 @@ rabbitmq_prometheus_port: "15692"
 
 redis_port: "6379"
 redis_sentinel_port: "26379"
+
+redis_tls_port: "6443"
+redis_sentinel_tls_port: "26443"
+
+redis_enable_tls: "yes"
+redis_tls_certfile: "redis-cert.pem"
+redis_tls_keyfile: "redis-key.pem"
+
+redis_tls_use_openstack_ca: "yes"
+# No effect if redis_tls_use_openstack_ca: "yes"
+redis_tls_cafile: "ca-certificate.pem"
+redis_tls_container_path: "/etc/redis/certs"
 
 sahara_internal_fqdn: "{{ kolla_internal_fqdn }}"
 sahara_external_fqdn: "{{ kolla_external_fqdn }}"

@@ -18,12 +18,6 @@ max_overflow = 1000
 max_pool_size = {{ database_max_pool_size }}
 max_retries = -1
 
-[cache]
-backend = oslo_cache.memcache_pool
-enabled = True
-memcache_servers = {% for host in groups['memcached'] %}{{ 'api' | kolla_address(host) | put_address_in_context('memcache') }}:{{ memcached_port }}{% if not loop.last %},{% endif %}{% endfor %}
-
-
 [keystone_authtoken]
 service_type = placement
 www_authenticate_uri = {{ keystone_internal_url }}
@@ -52,4 +46,26 @@ enabled = true
 trace_sqlalchemy = true
 hmac_keys = {{ osprofiler_secret }}
 connection_string = {{ osprofiler_backend_connection_string }}
+{% endif %}
+
+[cache]
+enabled = "{{ 'True' if oslo_cache_enabled | bool else 'False' }}"
+backend = 'dogpile.cache.redis_sentinel'
+{% if oslo_cache_backend == 'oslo_cache.redis_sentinel' %}
+redis_username = default
+redis_password = {{ redis_master_password }}
+redis_sentinels = {{ oslo_cache_redis_sentinel_servers }}
+redis_sentinel_service_name = kolla
+{% if redis_enable_tls | bool %}
+tls_enabled = True
+tls_certfile = {{ redis_tls_container_path ~ '/' ~ redis_tls_certfile }}
+tls_keyfile = {{ redis_tls_container_path ~ '/' ~ redis_tls_keyfile }}
+tls_cafile = {{ openstack_cacert  if redis_tls_use_openstack_ca | bool else redis_tls_container_path ~ '/' ~ redis_tls_cafile }}
+{% endif %}
+{% endif %}
+{% for argument, value in oslo_cache_additional_backend_arguments.items() %}
+backend_argument = {{ argument ~':'~ value}}
+{% endfor %}
+{% if oslo_cache_memcache_servers | length %}
+memcache_servers = {{ oslo_cache_memcache_servers }}
 {% endif %}

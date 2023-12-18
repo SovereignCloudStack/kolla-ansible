@@ -44,6 +44,7 @@ ssl_ca_file = {{ om_rabbitmq_cacert }}
 {% if om_enable_rabbitmq_high_availability | bool %}
 amqp_durable_queues = true
 {% endif %}
+
 {% if om_enable_rabbitmq_quorum_queues | bool %}
 rabbit_quorum_queue = true
 {% endif %}
@@ -54,6 +55,23 @@ policy_file = {{ ceilometer_policy_file }}
 {% endif %}
 
 [cache]
-backend = oslo_cache.memcache_pool
-enabled = True
-memcache_servers = {% for host in groups['memcached'] %}{{ 'api' | kolla_address(host) | put_address_in_context('memcache') }}:{{ memcached_port }}{% if not loop.last %},{% endif %}{% endfor %}
+enabled = "{{ 'True' if oslo_cache_enabled | bool else 'False' }}"
+backend = {{ oslo_cache_backend }}
+{% if oslo_cache_backend == 'oslo_cache.redis_sentinel' %}
+backend_argument = sentinels:{{ oslo_cache_redis_sentinel_servers }}
+backend_argument = service_name:{{ oslo_cache_redis_sentinel_service_name }}
+backend_argument = username:default
+backend_argument = password:{{ redis_master_password }}
+{% if redis_enable_tls | bool %}
+backend_argument = ssl:True
+backend_argument = ssl_certfile:{{ redis_tls_container_path ~ '/' ~ redis_tls_certfile }}
+backend_argument = ssl_keyfile:{{ redis_tls_container_path ~ '/' ~ redis_tls_keyfile }}
+backend_argument = ssl_ca_certs:{{ openstack_cacert  if redis_tls_use_openstack_ca | bool else redis_tls_container_path ~ '/' ~ redis_tls_cafile }}
+{% endif %}
+{% endif %}
+{% for argument, value in oslo_cache_additional_backend_arguments.items() %}
+backend_argument = {{ argument ~':'~ value}}
+{% endfor %}
+{% if oslo_cache_memcache_servers | length %}
+memcache_servers = {{ oslo_cache_memcache_servers }}
+{% endif %}

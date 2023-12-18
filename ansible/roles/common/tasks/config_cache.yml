@@ -1,0 +1,12 @@
+- name: Copy cache config to a temporary file
+  tempfile:
+    state: file
+    suffix: temp
+  register: cache_config_tempfile
+- name: Create  configuration for oslo cache
+  template:
+    src: cache.conf.j2
+    dest: "{{ cache_config_tempfile.path }}"
+    backup: true
+
+

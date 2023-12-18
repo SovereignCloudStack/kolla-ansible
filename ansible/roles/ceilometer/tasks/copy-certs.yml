@@ -4,3 +4,9 @@
     role: service-cert-copy
   vars:
     project_services: "{{ ceilometer_services }}"
+- name: "Copy Redis certificates for {{ project_name }}"
+  import_role:
+    role: redis
+    tasks_from: copy-certs
+  vars:
+    project_services: "{{ ceilometer_services }}"

@@ -3,10 +3,17 @@ daemonize no
 pidfile "/var/run/redis/redis-sentinel.pid"
 logfile "/var/log/kolla/redis/redis-sentinel.log"
 bind {{ api_interface_address }}
-port {{ redis_sentinel_port }}
+port {{ '0' if redis_enable_tls | bool else redis_sentinel_port }}
 sentinel myid {{ inventory_hostname | hash('sha1') }}
-sentinel monitor kolla {{ redis_master_address }} {{ redis_port }} 2
+sentinel monitor kolla {{ redis_master_address }} {{ redis_tls_port if redis_enable_tls | bool  else redis_port }} 2
 sentinel auth-pass kolla {{ redis_master_password }}
 sentinel down-after-milliseconds kolla 5000
 sentinel failover-timeout kolla 60000
 sentinel parallel-syncs kolla 1
+{% if redis_enable_tls | bool %}
+tls-port {{ redis_sentinel_tls_port }}
+tls-replication yes
+tls-cert-file {{ redis_tls_container_path ~ '/' ~ redis_tls_certfile }}
+tls-key-file {{ redis_tls_container_path ~ '/' ~ redis_tls_keyfile }}
+tls-ca-cert-file {{ openstack_cacert  if redis_tls_use_openstack_ca | bool else redis_tls_container_path ~ '/' ~ redis_tls_cafile }}
+{% endif %}

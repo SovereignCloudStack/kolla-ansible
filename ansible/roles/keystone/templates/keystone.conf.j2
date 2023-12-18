@@ -45,11 +45,6 @@ max_active_keys = {{ ((fernet_token_expiry | int +
                        fernet_key_rotation_interval | int - 1) //
                       fernet_key_rotation_interval | int) + 2 }}
 
-[cache]
-backend = oslo_cache.memcache_pool
-enabled = True
-memcache_servers = {% for host in groups['memcached'] %}{{ 'api' | kolla_address(host) | put_address_in_context('memcache') }}:{{ memcached_port }}{% if not loop.last %},{% endif %}{% endfor %}
-
 [oslo_messaging_notifications]
 transport_url = {{ notify_transport_url }}
 {% if keystone_enabled_notification_topics %}
@@ -68,6 +63,7 @@ ssl_ca_file = {{ om_rabbitmq_cacert }}
 {% if om_enable_rabbitmq_high_availability | bool %}
 amqp_durable_queues = true
 {% endif %}
+
 {% if om_enable_rabbitmq_quorum_queues | bool %}
 rabbit_quorum_queue = true
 {% endif %}
@@ -98,4 +94,26 @@ remote_id_attribute = {{ keystone_remote_id_attribute_oidc }}
 
 [auth]
 methods = password,token,openid,application_credential
+{% endif %}
+
+[cache]
+enabled = "{{ 'True' if oslo_cache_enabled | bool else 'False' }}"
+backend = 'dogpile.cache.redis_sentinel'
+{% if oslo_cache_backend == 'oslo_cache.redis_sentinel' %}
+redis_username = default
+redis_password = {{ redis_master_password }}
+redis_sentinels = {{ oslo_cache_redis_sentinel_servers }}
+redis_sentinel_service_name = kolla
+{% if redis_enable_tls | bool %}
+tls_enabled = True
+tls_certfile = {{ redis_tls_container_path ~ '/' ~ redis_tls_certfile }}
+tls_keyfile = {{ redis_tls_container_path ~ '/' ~ redis_tls_keyfile }}
+tls_cafile = {{ openstack_cacert  if redis_tls_use_openstack_ca | bool else redis_tls_container_path ~ '/' ~ redis_tls_cafile }}
+{% endif %}
+{% endif %}
+{% for argument, value in oslo_cache_additional_backend_arguments.items() %}
+backend_argument = {{ argument ~':'~ value}}
+{% endfor %}
+{% if oslo_cache_memcache_servers | length %}
+memcache_servers = {{ oslo_cache_memcache_servers }}
 {% endif %}

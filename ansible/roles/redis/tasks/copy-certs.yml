@@ -1,0 +1,49 @@
+---
+- debug:
+    msg: "Redis Services for TLS copy {{ item.key }}"
+  with_dict: "{{ project_services | select_services_enabled_and_mapped_to_host }}"
+
+- name: Copying over extra CA certificates
+  become: true
+  with_dict: "{{ project_services | select_services_enabled_and_mapped_to_host }}"
+  copy:
+    src: "{{ kolla_certificates_dir }}/ca/"
+    dest: "{{ node_config_directory }}/{{ item.key }}/ca-certificates"
+    mode: "0644"
+  when:
+    - kolla_copy_ca_into_containers | bool
+  notify:
+    - "Restart {{ item.key }} container"
+
+- name: Copying over TLS certificate
+  become: true
+  with_dict: "{{ project_services | select_services_enabled_and_mapped_to_host }}"
+  copy:
+    src: "{{ backend_tls_cert }}"
+    dest: "{{ node_config_directory }}/{{ item.key }}/{{ redis_tls_certfile }}"
+    mode: "0644"
+  vars:
+    certs:
+      - "{{ kolla_certificates_dir }}/{{ inventory_hostname }}/{{ redis_tls_certfile }}"
+      - "{{ kolla_certificates_dir }}/{{ inventory_hostname }}-cert.pem"
+      - "{{ kolla_certificates_dir }}/{{ redis_tls_certfile }}"
+    backend_tls_cert: "{{ lookup('first_found', certs) }}"
+
+  notify:
+    - "Restart {{ item.key }} container"
+
+- name: Copying over TLS key
+  become: true
+  with_dict: "{{ project_services | select_services_enabled_and_mapped_to_host }}"
+  copy:
+    src: "{{ backend_tls_key }}"
+    dest: "{{ node_config_directory }}/{{ item.key}}/{{ redis_tls_keyfile }}"
+    mode: "0600"
+  vars:
+    keys:
+      - "{{ kolla_certificates_dir }}/{{ inventory_hostname }}/{{ project_name }}-key.pem"
+      - "{{ kolla_certificates_dir }}/{{ inventory_hostname }}-key.pem"
+      - "{{ kolla_certificates_dir }}/{{ redis_tls_keyfile  }}"
+    backend_tls_key: "{{ lookup('first_found', keys) }}"
+  notify:
+    - "Restart {{ item.key }} container"

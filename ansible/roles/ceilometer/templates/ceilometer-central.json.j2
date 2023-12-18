@@ -43,6 +43,27 @@
             "owner": "ceilometer",
             "perm": "0600"
         }
+        {% if redis_enable_tls  | bool %},
+        {% if not redis_tls_use_openstack_ca | bool%}
+        {
+            "source": "{{ container_config_directory }}/ca-certificates/{{ redis_tls_cafile }}",
+            "dest": "{{ redis_tls_container_path ~ '/' ~ redis_tls_cafile }}",
+            "owner": "ceilometer",
+            "perm": "0600"
+        },
+        {% endif %}
+        {
+            "source": "{{ container_config_directory }}/redis-cert.pem",
+            "dest": "{{ redis_tls_container_path ~ '/' ~ redis_tls_certfile }}",
+            "owner": "ceilometer",
+            "perm": "0600"
+        },
+        {
+            "source": "{{ container_config_directory }}/redis-key.pem",
+            "dest": "{{ redis_tls_container_path ~ '/' ~ redis_tls_keyfile }}",
+            "owner": "ceilometer",
+            "perm": "0600"
+        }{% endif %}
     ],
     "permissions": [
         {
