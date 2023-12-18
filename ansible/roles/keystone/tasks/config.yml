@@ -54,13 +54,18 @@
     - item.value.enabled | bool
   notify:
     - Restart {{ item.key }} container
-
+    
+- include_role: 
+    name: common
+    task_from: config_cache
+  
 - name: Copying over keystone.conf
   vars:
     service_name: "{{ item.key }}"
   merge_configs:
     sources:
       - "{{ role_path }}/templates/keystone.conf.j2"
+      - "{{ cache_config_tempfile.path }}"
       - "{{ node_custom_config }}/global.conf"
       - "{{ node_custom_config }}/keystone.conf"
       - "{{ node_custom_config }}/keystone/{{ item.key }}.conf"
@@ -75,6 +80,11 @@
     - item.value.enabled | bool
   notify:
     - Restart {{ item.key }} container
+- name: Delete cache config temp file
+  file:
+    path: "{{ cache_config_tempfile.path }}"
+    state: absent
+
 
 - name: Copying keystone-startup script for keystone
   vars:

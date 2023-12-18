@@ -48,6 +48,10 @@
   notify:
     - "Restart {{ item.key }} container"
 
+- include_role: 
+    name: common
+    task_from: config_cache
+
 - name: Copying over placement.conf
   become: true
   vars:
@@ -55,6 +59,7 @@
   merge_configs:
     sources:
       - "{{ role_path }}/templates/placement.conf.j2"
+      - "{{ cache_config_tempfile.path }}"
       - "{{ node_custom_config }}/global.conf"
       - "{{ node_custom_config }}/placement.conf"
       - "{{ node_custom_config }}/placement/{{ item.key }}.conf"
@@ -68,6 +73,11 @@
   notify:
     - "Restart {{ item.key }} container"
 
+- name: Delete cache config temp file
+  file:
+    path: "{{ cache_config_tempfile.path }}"
+    state: absent
+    
 - name: Copying over placement-api wsgi configuration
   become: true
   vars:

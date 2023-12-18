@@ -44,6 +44,7 @@ ssl_ca_file = {{ om_rabbitmq_cacert }}
 {% if om_enable_rabbitmq_high_availability | bool %}
 amqp_durable_queues = true
 {% endif %}
+
 {% if om_enable_rabbitmq_quorum_queues | bool %}
 rabbit_quorum_queue = true
 {% endif %}
@@ -52,8 +53,3 @@ rabbit_quorum_queue = true
 [oslo_policy]
 policy_file = {{ ceilometer_policy_file }}
 {% endif %}
-
-[cache]
-backend = oslo_cache.memcache_pool
-enabled = True
-memcache_servers = {% for host in groups['memcached'] %}{{ 'api' | kolla_address(host) | put_address_in_context('memcache') }}:{{ memcached_port }}{% if not loop.last %},{% endif %}{% endfor %}
