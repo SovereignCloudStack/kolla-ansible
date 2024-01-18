@@ -1,9 +1,9 @@
 [cache]
-enabled = True
-{% if kolla_caching_backend == "redis" %}
-backend = dogpile.cache.redis
-backend_argument = url:{{ redis_connection_string }}
-{% else %}
-backend = oslo_cache.memcache_pool
-memcache_servers = {% for host in groups['memcached'] %}{{ 'api' | kolla_address(host) | put_address_in_context('memcache') }}:{{ memcached_port }}{% if not loop.last %},{% endif %}{% endfor %}
+enabled = "{{ 'True' if oslo_cache_enabled | bool else 'False' }}"
+backend = {{ oslo_cache_backend }}
+{% if oslo_cache_backend_argument | length %}
+backend_argument = {{ oslo_cache_backend_argument }}
+{% endif %}
+{% if oslo_cache_memcache_servers | length %}
+memcache_servers = {{ oslo_cache_memcache_servers }}
 {% endif %}

@@ -25,6 +25,11 @@
   notify:
     - Restart {{ item.key }} container
 
+- include_tasks: copy-certs.yml
+  vars:
+    project_services: "{{ redis_services }}"
+  when: redis_enable_tls | bool
+
 - name: Copying over redis config files
   template:
     src: "{{ item.key }}.conf.j2"

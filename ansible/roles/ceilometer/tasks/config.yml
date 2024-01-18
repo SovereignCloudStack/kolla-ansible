@@ -192,9 +192,6 @@
   with_dict: "{{ ceilometer_services }}"
   notify:
     - "Restart {{ item.key }} container"
-- include_role: 
-    name: common
-    task_from: config_cache
   
 - name: Copying over ceilometer.conf
   vars:
@@ -202,7 +199,6 @@
   merge_configs:
     sources:
       - "{{ role_path }}/templates/ceilometer.conf.j2"
-      - "{{ cache_config_tempfile.path }}"
       - "{{ node_custom_config }}/global.conf"
       - "{{ node_custom_config }}/ceilometer.conf"
       - "{{ node_custom_config }}/ceilometer/{{ item.key }}.conf"
@@ -216,10 +212,7 @@
   with_dict: "{{ ceilometer_services }}"
   notify:
     - "Restart {{ item.key }} container"
-- name: Delete cache config temp file
-  file:
-    path: "{{ cache_config_tempfile.path }}"
-    state: absent
+
 - name: Check custom event_definitions.yaml exists
   stat:
     path: "{{ node_custom_config }}/ceilometer/event_definitions.yaml"

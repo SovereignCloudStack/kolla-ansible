@@ -99,12 +99,24 @@ database_max_pool_size: 1
 ####################
 kolla_container_engine: "docker"
 
-
+################
+# Memcache
+################
+memcache_servers: "{% for host in groups['memcached'] %}{{ 'api' | kolla_address(host) | put_address_in_context('memcache') }}:{{ memcached_port }}{% if not loop.last %},{% endif %}{% endfor %}"
+redis_connection_test: "url:redis://default:{{ redis_master_password }}@{{ api_interface_address }}:{{ redis_port }}"
 ####################
-# Cache
+# Oslo Cache
 ####################
-kolla_caching_backend: "{{ 'redis' if enable_redis | bool else 'memcached' }}"
-
+oslo_cache_enabled: "yes"
+oslo_cache_backend: "oslo_cache.memcache_pool"
+# oslo_cache_backend: "dogpile.cache.redis"
+# oslo_cache_backend_argument: "{{ 'url:' ~ redis_connection_string if oslo_cache_backend == 'dogpile.cache.redis' else '' }}"
+oslo_cache_backend_argument: "{{ redis_connection_test if oslo_cache_backend == 'dogpile.cache.redis' else '' }}"
+# oslo_cache_backend_argument: ""
+oslo_cache_memcache_servers: "{{ memcache_servers if oslo_cache_backend == 'oslo_cache.memcache_pool' else '' }}"
+oslo_cache_redis_sentinel_servers: "192.168.123.179:{{ redis_sentinel_tls_port if redis_enable_tls | bool else redis_sentinel_port }}"
+oslo_cache_redis_sentinel_service_name: "kolla"
+oslo_cache_additional_backend_arguments: {}
 ####################
 # Docker options
 ####################
@@ -626,6 +638,18 @@ rabbitmq_prometheus_port: "15692"
 redis_port: "6379"
 redis_sentinel_port: "26379"
 
+redis_tls_port: "6443"
+redis_sentinel_tls_port: "26443"
+
+redis_enable_tls: "yes"
+redis_tls_certfile: "redis-cert.pem"
+redis_tls_keyfile: "redis-key.pem"
+
+redis_tls_use_openstack_ca: "yes"
+# No effect if redis_tls_use_openstack_ca: "yes"
+redis_tls_cafile: "ca-certificate.pem"
+redis_tls_container_path: "/etc/redis/certs"
+
 sahara_internal_fqdn: "{{ kolla_internal_fqdn }}"
 sahara_external_fqdn: "{{ kolla_external_fqdn }}"
 sahara_api_port: "8386"
@@ -951,7 +975,7 @@ enable_opensearch_dashboards_external: "{{ enable_opensearch_dashboards | bool }
 ####################
 # Redis options
 ####################
-redis_connection_string: "redis://{% for host in groups['redis'] %}{% if host == groups['redis'][0] %}admin:{{ redis_master_password }}@{{ 'api' | kolla_address(host) | put_address_in_context('url') }}:{{ redis_sentinel_port }}?sentinel=kolla{% else %}&sentinel_fallback={{ 'api' | kolla_address(host) | put_address_in_context('url') }}:{{ redis_sentinel_port }}{% endif %}{% endfor %}{{ redis_connection_string_extras }}"
+redis_connection_string: "redis://{% for host in groups['redis'] %}{% if host == groups['redis'][0] %}default:{{ redis_master_password }}@{{ 'api' | kolla_address(host) | put_address_in_context('url') }}:{{ redis_sentinel_port }}?sentinel=kolla{% else %}&sentinel_fallback={{ 'api' | kolla_address(host) | put_address_in_context('url') }}:{{ redis_sentinel_port }}{% endif %}{% endfor %}{{ redis_connection_string_extras }}"
 redis_connection_string_extras: "&db=0&socket_timeout=60&retry_on_timeout=yes"
 
 ####################

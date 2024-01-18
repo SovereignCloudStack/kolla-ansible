@@ -41,6 +41,12 @@
 - include_tasks: copy-certs.yml
   when:
     - kolla_copy_ca_into_containers | bool or keystone_enable_tls_backend | bool
+- name: show templating results
+  debug:
+   msg: "{{ lookup('template', 'keystone.conf.j2') }}"
+  with_dict: "{{ keystone_services }}"
+  vars:
+    service_name: "{{ item.key }}"
 
 - name: Copying over config.json files for services
   template:
@@ -54,18 +60,12 @@
     - item.value.enabled | bool
   notify:
     - Restart {{ item.key }} container
-    
-- include_role: 
-    name: common
-    task_from: config_cache
-  
 - name: Copying over keystone.conf
   vars:
     service_name: "{{ item.key }}"
   merge_configs:
     sources:
       - "{{ role_path }}/templates/keystone.conf.j2"
-      - "{{ cache_config_tempfile.path }}"
       - "{{ node_custom_config }}/global.conf"
       - "{{ node_custom_config }}/keystone.conf"
       - "{{ node_custom_config }}/keystone/{{ item.key }}.conf"
@@ -80,11 +80,6 @@
     - item.value.enabled | bool
   notify:
     - Restart {{ item.key }} container
-- name: Delete cache config temp file
-  file:
-    path: "{{ cache_config_tempfile.path }}"
-    state: absent
-
 
 - name: Copying keystone-startup script for keystone
   vars:
