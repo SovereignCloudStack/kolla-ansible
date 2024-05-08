@@ -65,3 +65,17 @@
     - service.host_in_groups | bool
     - service.enabled | bool
     - openvswitch_ovs_vsctl_wrapper_enabled | bool
+
+- name: Copying over start-ovs-ipsec
+  vars:
+    service: "{{ openvswitch_services['openvswitch-ipsec'] }}"
+  template:
+    src: "{{ role_path }}/templates/start-ovs-ipsec.j2"
+    dest: "{{ node_config_directory }}/openvswitch-ipsec/start-ovs-ipsec"
+    mode: "0770"
+  become: true
+  when:
+    - service.host_in_groups | bool
+    - service.enabled | bool
+  notify:
+    - "Restart openvswitch-ipsec container"
