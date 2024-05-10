@@ -116,4 +116,4 @@
     - Restart rabbitmq container
 
 - include_tasks: copy-certs.yml
-  when: rabbitmq_enable_tls | bool
+  when: rabbitmq_enable_tls | bool or rabbitmq_enable_tls_backend | bool

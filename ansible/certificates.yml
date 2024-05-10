@@ -1,7 +1,26 @@
 ---
+- name: Backend certificates requirement
+  hosts: localhost
+  vars:
+    backend_tls_flag_pattern: _enable_tls_backend
+  tasks:
+    - name: If backend certificates are needed
+      set_fact:
+        backend_certificate_needed: >-
+          {{
+            backend_certificate_needed | default(false) | bool or
+            vars[item] | default(false) | bool
+          }}
+      with_items: >-
+        {{
+          vars | dict2items |
+          selectattr('key', 'search', backend_tls_flag_pattern) |
+          map(attribute='key')
+        }}
+
 - import_playbook: gather-facts.yml
   when: >-
-    kolla_enable_tls_backend | default(false) | bool or
+    hostvars['localhost']['backend_certificate_needed'] | bool or
     rabbitmq_enable_tls | default(false) | bool or
     certificates_generate_libvirt | default(libvirt_tls) | default(false) | bool
 

@@ -18,12 +18,12 @@ following:
 * client-server traffic, typically between OpenStack services using the
   :oslo.messaging-doc:`oslo.messaging </>` library and RabbitMQ
 * RabbitMQ Management API and UI (frontend connection to HAProxy only)
+* RabbitMQ Management API and UI (backend connection from HAProxy to RabbitMQ)
 
 Encryption of the following channels is not currently supported:
 
 * RabbitMQ cluster traffic between RabbitMQ server nodes
 * RabbitMQ CLI communication with RabbitMQ server nodes
-* RabbitMQ Management API and UI (backend connection from HAProxy to RabbitMQ)
 
 Client-server
 -------------
@@ -82,6 +82,12 @@ Management API and UI
 The management API and UI are accessed via HAProxy, exposed only on the
 internal VIP. As such, traffic to this endpoint is encrypted when
 ``kolla_enable_tls_internal`` is ``true``. See :ref:`tls-configuration`.
+
+Backend traffic between HAProxy and management API and UI is encrypted together
+with other services backends by setting ``kolla_enable_tls_backend`` to
+``true``, or specifically for RabbitMQ with ``rabbitmq_enable_tls_backend``.
+For more information about backend TLS encryption configuration see
+:ref:`backend-tls-configuration`.
 
 Passing arguments to RabbitMQ server's Erlang VM
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

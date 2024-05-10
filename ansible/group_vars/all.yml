@@ -586,7 +586,7 @@ prometheus_instance_label:
 proxysql_admin_port: "6032"
 
 rabbitmq_port: "{{ '5671' if rabbitmq_enable_tls | bool else '5672' }}"
-rabbitmq_management_port: "15672"
+rabbitmq_management_port: "{{ '15671' if rabbitmq_enable_tls_backend | bool else '15672' }}"
 rabbitmq_cluster_port: "25672"
 rabbitmq_epmd_port: "4369"
 rabbitmq_prometheus_port: "15692"
@@ -901,6 +901,7 @@ rabbitmq_enable_tls: "no"
 # CA certificate bundle in RabbitMQ container.
 rabbitmq_cacert: "/etc/ssl/certs/{{ 'ca-certificates.crt' if kolla_base_distro in ['debian', 'ubuntu'] else 'ca-bundle.trust.crt' }}"
 rabbitmq_datadir_volume: "rabbitmq"
+rabbitmq_enable_tls_backend: "{{ kolla_enable_tls_backend }}"
 
 ####################
 # HAProxy options

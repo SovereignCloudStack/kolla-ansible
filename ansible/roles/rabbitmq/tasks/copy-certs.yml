@@ -50,3 +50,9 @@
     - service | service_enabled_and_mapped_to_host
   notify:
     - Restart rabbitmq container
+
+- name: "Copy backend certificates and keys for {{ project_name }}"
+  import_role:
+    role: service-cert-copy
+  vars:
+    project_services: "{{ rabbitmq_services }}"

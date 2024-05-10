@@ -105,6 +105,38 @@
     - not kolla_externally_managed_cert | bool
     - rabbitmq_enable_tls | bool
 
+- name: Check if backend TLS certificate exists for RabbitMQ
+  assert:
+    that: cert | length > 0
+    fail_msg: No TLS certificate provided for RabbitMQ.
+  vars:
+    cert: "{{ query('first_found', paths, errors='ignore') }}"
+    paths:
+      - "{{ kolla_certificates_dir }}/{{ inventory_hostname }}/rabbitmq-backend-cert.pem"
+      - "{{ kolla_certificates_dir }}/{{ inventory_hostname }}/rabbitmq-cert.pem"
+      - "{{ kolla_certificates_dir }}/{{ inventory_hostname }}-cert.pem"
+      - "{{ kolla_certificates_dir }}/rabbitmq-backend-cert.pem"
+      - "{{ kolla_certificates_dir }}/rabbitmq-cert.pem"
+  when:
+    - not kolla_externally_managed_cert | bool
+    - rabbitmq_enable_tls_backend | bool
+
+- name: Check if backend TLS key exists for RabbitMQ
+  assert:
+    that: key | length > 0
+    fail_msg: No backend TLS key provided for RabbitMQ.
+  vars:
+    key: "{{ query('first_found', paths, errors='ignore') }}"
+    paths:
+      - "{{ kolla_certificates_dir }}/{{ inventory_hostname }}/rabbitmq-backend-key.pem"
+      - "{{ kolla_certificates_dir }}/{{ inventory_hostname }}/rabbitmq-key.pem"
+      - "{{ kolla_certificates_dir }}/{{ inventory_hostname }}-key.pem"
+      - "{{ kolla_certificates_dir }}/rabbitmq-backend-key.pem"
+      - "{{ kolla_certificates_dir }}/rabbitmq-key.pem"
+  when:
+    - not kolla_externally_managed_cert | bool
+    - rabbitmq_enable_tls_backend | bool
+
 - block:
     - name: List RabbitMQ policies
       become: true

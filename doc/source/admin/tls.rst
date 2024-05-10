@@ -211,6 +211,8 @@ For CentOS or Rocky:
 
    openstack_cacert: /etc/pki/tls/certs/ca-bundle.crt
 
+.. _backend-tls-configuration:
+
 Back-end TLS Configuration
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 

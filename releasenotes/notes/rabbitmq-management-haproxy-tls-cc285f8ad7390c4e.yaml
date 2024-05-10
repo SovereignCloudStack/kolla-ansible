@@ -1,0 +1,14 @@
+---
+features:
+  - |
+    Implements TLS encryption between RabbitMQ management and HAProxy
+    New setting ``rabbitmq_enable_tls_backend`` (tied by default to
+    ``kolla_enable_tls_backend``) enables TLS encryption of backend
+    communication between RabbitMQ management plugin (UI and API) and
+    HAProxy.
+
+upgrade:
+  - |
+    When backend TLS encryption is enabled, the RabbitMQ management plugin
+    uses different port (15671 instead of 15672) for communication,
+    following the convention for RabbitMQ.

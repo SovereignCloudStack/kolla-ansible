@@ -33,6 +33,6 @@ telegraf_extra_volumes: "{{ default_extra_volumes }}"
 ####################
 haproxy_proto: "http"
 influxdb_proto: "http"
-rabbitmq_proto: "http"
+rabbitmq_proto: "{{ 'https' if rabbitmq_enable_tls_backend | bool else 'http' }}"
 mariadb_proto: "tcp"
 opensearch_proto: "http"
