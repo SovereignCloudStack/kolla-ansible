@@ -1174,6 +1174,10 @@ neutron_ovn_availability_zones: []
 # Enable OVN agent
 neutron_enable_ovn_agent: "no"
 
+# OVS chassis certificates
+neutron_ovs_generate_certificates: "no"
+neutron_ovs_use_certificates: "{{ (enable_ovn_ipsec | bool) or (neutron_ovs_generate_certificates | bool) }}"
+
 #######################
 # Nova options
 #######################

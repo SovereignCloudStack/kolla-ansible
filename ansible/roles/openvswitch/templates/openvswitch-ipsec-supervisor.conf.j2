@@ -1,0 +1,23 @@
+[supervisord]
+nodaemon=true
+logfile=/var/log/kolla/openvswitch/openvswitch-ipsec-supervisor.log
+
+[program:ovs-ipsec-monitor]
+command=pidproxy /var/run/openvswitch/ovs-monitor-ipsec.pid /usr/share/openvswitch/scripts/ovs-ctl --no-restart-ike-daemon --ike-daemon=libreswan start-ovs-ipsec
+autostart=true
+autorestart=false
+redirect_stderr=true
+
+[program:ipsec]
+command=/usr/local/bin/start-ipsec
+autostart=true
+autorestart=false
+redirect_stderr=true
+stdout_logfile=/var/log/kolla/openvswitch/ipsec.log
+
+[eventlistener:process_monitor]
+command=/usr/local/bin/ovn_ipsec_supervisor_event_handler.py
+events=PROCESS_STATE
+autostart=true
+autorestart=true
+stdout_logfile=/var/log/kolla/openvswitch/openvswitch-ipsec-supervisor-process-monitor.log

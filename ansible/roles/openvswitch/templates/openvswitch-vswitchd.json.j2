@@ -6,6 +6,25 @@
             "dest": "/usr/local/bin/start-ovs",
             "owner": "root",
             "perm": "0655"
+        }{% if neutron_ovs_use_certificates %},
+        {
+            "source": "{{ container_config_directory }}/root.pem",
+            "dest": "/etc/openvswitch/root.pem",
+            "owner": "root",
+            "perm": "0660"
+        },
+        {
+            "source": "{{ container_config_directory }}/cert.pem",
+            "dest": "/etc/openvswitch/cert.pem",
+            "owner": "root",
+            "perm": "0660"
+        },
+        {
+            "source": "{{ container_config_directory }}/key.pem",
+            "dest": "/etc/openvswitch/key.pem",
+            "owner": "root",
+            "perm": "0660"
         }
+        {% endif %}
     ]
 }

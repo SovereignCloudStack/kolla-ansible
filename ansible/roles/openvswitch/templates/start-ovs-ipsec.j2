@@ -1,13 +1,4 @@
 #!/usr/bin/env bash
-/usr/share/openvswitch/scripts/ovs-ctl --no-restart-ike-daemon --ike-daemon=libreswan start-ovs-ipsec
 
-# Check configuration file
-/usr/libexec/ipsec/addconn --config /etc/ipsec.conf --checkconfig
-# Check for kernel modules
-/usr/libexec/ipsec/_stackmanager start
-# Check for nss database status and migration
-/usr/sbin/ipsec --checknss
-# Check for nflog setup
-/usr/sbin/ipsec --checknflog
-# Start the actual IKE daemon
-/usr/libexec/ipsec/pluto --leak-detective --config /etc/ipsec.conf --nofork
+# Start supervisor
+/usr/local/bin/supervisord

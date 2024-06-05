@@ -49,6 +49,7 @@ openvswitch_services:
     privileged: True
     volumes: "{{ openvswitch_ipsec_default_volumes + openvswitch_ipsec_extra_volumes }}"
     dimensions: "{{ openvswitch_ipsec_dimensions }}"
+    healthcheck: {}
 
 ####################
 # Docker

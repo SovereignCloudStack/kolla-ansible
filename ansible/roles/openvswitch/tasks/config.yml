@@ -79,3 +79,101 @@
     - service.enabled | bool
   notify:
     - "Restart openvswitch-ipsec container"
+
+- name: Copying over start-ipsec
+  vars:
+    service: "{{ openvswitch_services['openvswitch-ipsec'] }}"
+  template:
+    src: "{{ role_path }}/templates/start-ipsec.j2"
+    dest: "{{ node_config_directory }}/openvswitch-ipsec/start-ipsec"
+    mode: "0770"
+  become: true
+  when:
+    - service.host_in_groups | bool
+    - service.enabled | bool
+  notify:
+    - "Restart openvswitch-ipsec container"
+
+- name: Copying over certificate files for openvswitch-db-server
+  become: true
+  vars:
+    service: "{{ openvswitch_services['openvswitch-db-server'] }}"
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    mode: "0660"
+  when:
+    - service.host_in_groups | bool
+    - service.enabled | bool
+    - neutron_ovs_use_certificates | bool
+  loop:
+    - { src: "{{ kolla_certificates_dir }}/ca/root.crt", dest: "{{ node_config_directory }}/openvswitch-db-server/root.pem"}
+    - { src: "{{ kolla_certificates_dir }}/{{ inventory_hostname }}/openvswitch-cert.pem", dest: "{{ node_config_directory }}/openvswitch-db-server/cert.pem"}
+    - { src: "{{ kolla_certificates_dir }}/{{ inventory_hostname }}/openvswitch-key.pem", dest: "{{ node_config_directory }}/openvswitch-db-server/key.pem"}
+  notify:
+    - "Restart openvswitch-db-server container"
+
+- name: Copying over certificate files for openvswitch-vswitchd
+  become: true
+  vars:
+    service: "{{ openvswitch_services['openvswitch-vswitchd'] }}"
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    mode: "0660"
+  when:
+    - service.host_in_groups | bool
+    - service.enabled | bool
+    - neutron_ovs_use_certificates | bool
+  loop:
+    - { src: "{{ kolla_certificates_dir }}/ca/root.crt", dest: "{{ node_config_directory }}/openvswitch-vswitchd/root.pem"}
+    - { src: "{{ kolla_certificates_dir }}/{{ inventory_hostname }}/openvswitch-cert.pem", dest: "{{ node_config_directory }}/openvswitch-vswitchd/cert.pem"}
+    - { src: "{{ kolla_certificates_dir }}/{{ inventory_hostname }}/openvswitch-key.pem", dest: "{{ node_config_directory }}/openvswitch-vswitchd/key.pem"}
+  notify:
+    - "Restart openvswitch-db-server container"
+
+- name: Copying over certificate files for openvswitch-ipsec
+  become: true
+  vars:
+    service: "{{ openvswitch_services['openvswitch-ipsec'] }}"
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    mode: "0660"
+  when:
+    - service.host_in_groups | bool
+    - service.enabled | bool
+  loop:
+    - { src: "{{ kolla_certificates_dir }}/ca/root.crt", dest: "{{ node_config_directory }}/openvswitch-ipsec/root.pem"}
+    - { src: "{{ kolla_certificates_dir }}/{{ inventory_hostname }}/openvswitch-cert.pem", dest: "{{ node_config_directory }}/openvswitch-ipsec/cert.pem"}
+    - { src: "{{ kolla_certificates_dir }}/{{ inventory_hostname }}/openvswitch-key.pem", dest: "{{ node_config_directory }}/openvswitch-ipsec/key.pem"}
+  notify:
+    - "Restart openvswitch-ipsec container"
+
+- name: Copying over openvswitch-ipsec-supervisor.conf
+  vars:
+    service: "{{ openvswitch_services['openvswitch-ipsec'] }}"
+  template:
+    src: "{{ role_path }}/templates/openvswitch-ipsec-supervisor.conf.j2"
+    dest: "{{ node_config_directory }}/openvswitch-ipsec/openvswitch-ipsec-supervisor.conf"
+    mode: "0660"
+  become: true
+  when:
+    - service.host_in_groups | bool
+    - service.enabled | bool
+  notify:
+    - "Restart openvswitch-ipsec container"
+
+- name: Copying over ovn_ipsec_supervisor_event_handler.py
+  vars:
+    service: "{{ openvswitch_services['openvswitch-ipsec'] }}"
+  template:
+    src: "{{ role_path }}/files/ovn_ipsec_supervisor_event_handler.py"
+    dest: "{{ node_config_directory }}/openvswitch-ipsec/ovn_ipsec_supervisor_event_handler.py"
+    mode: "0770"
+  become: true
+  when:
+    - service.host_in_groups | bool
+    - service.enabled | bool
+  notify:
+    - "Restart openvswitch-ipsec container"
