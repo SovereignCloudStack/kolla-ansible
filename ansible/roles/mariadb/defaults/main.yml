@@ -136,3 +136,10 @@ enable_mariadb_clustercheck: "{{ enable_haproxy }}"
 ####################
 mariadb_shard_database_user: "{% if mariadb_loadbalancer == 'haproxy' %}{{ database_user }}{% else %}{{ mariadb_shard_root_user_prefix }}{{ mariadb_shard_id | string }}{% endif %}"
 mariadb_database_shard: "{{ mariadb_shards_info }}"
+
+
+####################
+# TLS
+####################
+database_replication_enable_tls_backend: "{{ kolla_enable_tls_backend }}"
+kolla_externally_managed_cert: False

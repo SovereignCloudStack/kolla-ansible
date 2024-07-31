@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    Add TLS encryption option for MariaDB Galera cluster replication
+    and SST traffic as part of the backend TLS encryption setup for
+    MariaDB - ``database_replication_enable_tls_backend``

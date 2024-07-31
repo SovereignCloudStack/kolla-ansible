@@ -53,3 +53,33 @@
     state: stopped
   when:
     - container_facts['mariadb'] is not defined
+
+- name: Check if backend TLS certificate exists for MariaDB replication
+  assert:
+    that: cert | length > 0
+    fail_msg: No TLS certificate provided for MariaDB replication
+  vars:
+    cert: "{{ query('first_found', paths, errors='ignore') }}"
+    paths:
+      - "{{ kolla_certificates_dir }}/{{ inventory_hostname }}/mariadb-cert.pem"
+      - "{{ kolla_certificates_dir }}/{{ inventory_hostname }}-cert.pem"
+      - "{{ kolla_certificates_dir }}/mariadb-cert.pem"
+      - "{{ kolla_tls_backend_cert }}"
+  when:
+    - not kolla_externally_managed_cert | bool
+    - database_replication_enable_tls_backend | bool
+
+- name: Check if backend TLS key exists for MariaDB replication
+  assert:
+    that: key | length > 0
+    fail_msg: No backend TLS key provided for MariaDB replication
+  vars:
+    key: "{{ query('first_found', paths, errors='ignore') }}"
+    paths:
+      - "{{ kolla_certificates_dir }}/{{ inventory_hostname }}/mariadb-key.pem"
+      - "{{ kolla_certificates_dir }}/{{ inventory_hostname }}-key.pem"
+      - "{{ kolla_certificates_dir }}/mariadb-key.pem"
+      - "{{ kolla_tls_backend_key }}"
+  when:
+    - not kolla_externally_managed_cert | bool
+    - database_replication_enable_tls_backend | bool

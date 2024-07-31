@@ -28,7 +28,7 @@ datadir=/var/lib/mysql/
 
 wsrep_cluster_address=gcomm://{% if (groups[mariadb_shard_group] | length) > 1 %}{% for host in groups[mariadb_shard_group] %}{{ 'api' | kolla_address(host) | put_address_in_context('url') }}:{{ mariadb_wsrep_port }}{% if not loop.last %},{% endif %}{% endfor %}{% endif %}
 
-wsrep_provider_options=gmcast.listen_addr=tcp://{{ api_interface_address | put_address_in_context('url') }}:{{ mariadb_wsrep_port }};ist.recv_addr={{ api_interface_address | put_address_in_context('url') }}:{{ mariadb_ist_port }};{% for option in mariadb_wsrep_extra_provider_options %}{{ option }}{% if not loop.last %};{% endif %}{% endfor %}
+wsrep_provider_options=gmcast.listen_addr=tcp://{{ api_interface_address | put_address_in_context('url') }}:{{ mariadb_wsrep_port }};ist.recv_addr={{ api_interface_address | put_address_in_context('url') }}:{{ mariadb_ist_port }};{% if database_replication_enable_tls_backend | bool %}socket.ssl_cert=/etc/mariadb/certs/mariadb-cert.pem;socket.ssl_key=/etc/mariadb/certs/mariadb-key.pem;socket.ssl_ca=/etc/mariadb/certs/root.crt;{% endif %}{% for option in mariadb_wsrep_extra_provider_options %}{{ option }}{% if not loop.last %};{% endif %}{% endfor %}
 
 wsrep_node_address={{ api_interface_address | put_address_in_context('url') }}:{{ mariadb_wsrep_port }}
 
@@ -64,4 +64,10 @@ pid-file=/var/lib/mysql/mariadb.pid
 # and: https://jira.mariadb.org/browse/MDEV-18797
 # this can be removed when MDEV-18797 is resolved
 sockopt=",pf=ip6"
+{% endif %}
+{% if database_replication_enable_tls_backend | bool %}
+encrypt=4
+tca=/etc/mariadb/certs/root.crt
+tkey=/etc/mariadb/certs/mariadb-key.pem
+tcert=/etc/mariadb/certs/mariadb-cert.pem
 {% endif %}

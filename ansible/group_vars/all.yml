@@ -93,6 +93,7 @@ database_user: "root"
 database_port: "3306"
 database_connection_recycle_time: 10
 database_max_pool_size: 1
+database_replication_enable_tls_backend: "{{ kolla_enable_tls_backend }}"
 
 ####################
 # Container engine options
