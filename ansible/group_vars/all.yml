@@ -932,6 +932,7 @@ haproxy_http2_protocol: "alpn h2,http/1.1"
 kolla_enable_tls_internal: "no"
 kolla_enable_tls_external: "{{ kolla_enable_tls_internal if kolla_same_external_internal_vip | bool else 'no' }}"
 kolla_certificates_dir: "{{ node_config }}/certificates"
+kolla_externally_managed_cert: "no"
 kolla_external_fqdn_cert: "{{ kolla_certificates_dir }}/haproxy.pem"
 kolla_internal_fqdn_cert: "{{ kolla_certificates_dir }}/haproxy-internal.pem"
 kolla_admin_openrc_cacert: ""
@@ -954,6 +955,7 @@ kolla_enable_tls_backend: "no"
 kolla_verify_tls_backend: "yes"
 kolla_tls_backend_cert: "{{ kolla_certificates_dir }}/backend-cert.pem"
 kolla_tls_backend_key: "{{ kolla_certificates_dir }}/backend-key.pem"
+kolla_externally_managed_backend_cert: "no"
 
 #####################
 # ACME client options

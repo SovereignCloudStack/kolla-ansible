@@ -1,0 +1,14 @@
+---
+features:
+  - |
+    This change adds ``kolla_externally_managed_backend_cert`` flag managing
+    the same behaviour as ``kolla_externally_managed_cert`` but for backend
+    certificates. If set to ``true`` backend certificates won't be copied from
+    operator to hosts, assuming that they are provided externally directly on
+    hosts.
+upgrade:
+  - |
+    Update TLS documentation chapter to specify that
+    ``kolla_externally_managed_cert`` applies to internal/external certificates
+    and ``kolla_externally_managed_backend_cert`` does the same for backend
+    certificates.
