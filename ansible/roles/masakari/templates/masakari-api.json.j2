@@ -26,6 +26,18 @@
             "dest": "/etc/masakari/{{ masakari_policy_file }}",
             "owner": "masakari",
             "perm": "0600"
+        }{% endif %}{% if masakari_enable_tls_backend %},
+        {
+            "source": "{{ container_config_directory }}/masakari-cert.pem",
+            "dest": "/etc/masakari/certs/masakari-cert.pem",
+            "owner": "masakari",
+            "perm": "0600"
+        },
+        {
+            "source": "{{ container_config_directory }}/masakari-key.pem",
+            "dest": "/etc/masakari/certs/masakari-key.pem",
+            "owner": "masakari",
+            "perm": "0600"
         }{% endif %}
     ],
     "permissions": [

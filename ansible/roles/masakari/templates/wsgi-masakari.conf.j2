@@ -1,6 +1,14 @@
 {% set masakari_log_dir = '/var/log/kolla/masakari' %}
 {% set binary_path = '/var/lib/kolla/venv/bin' %}
 
+{% if masakari_enable_tls_backend | bool %}
+{% if kolla_base_distro in ['centos']  %}
+LoadModule ssl_module /usr/lib64/httpd/modules/mod_ssl.so
+{% else %}
+LoadModule ssl_module /usr/lib/apache2/modules/mod_ssl.so
+{% endif %}
+{% endif %}
+
 Listen {{ api_interface_address | put_address_in_context('url') }}:{{ masakari_api_port }}
 
 ServerSignature Off
@@ -34,4 +42,11 @@ LogLevel info
   WSGIDaemonProcess masakari group=masakari processes={{ masakari_api_workers }} threads=1 user=masakari
   WSGIProcessGroup masakari
   WSGIScriptAlias / "{{ binary_path }}/masakari-wsgi"
+
+{% if masakari_enable_tls_backend | bool %}
+  SSLEngine on
+  SSLCertificateFile /etc/masakari/certs/masakari-cert.pem
+  SSLCertificateKeyFile /etc/masakari/certs/masakari-key.pem
+{% endif %}
+
 </VirtualHost>

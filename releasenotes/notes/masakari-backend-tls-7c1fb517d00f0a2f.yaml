@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    Allows backend TLS encryption for Masakari connection from loadbalancer
+    using ``masakari_enable_tls_backend``, set by default from
+    ``kolla_enable_tls_backend``.

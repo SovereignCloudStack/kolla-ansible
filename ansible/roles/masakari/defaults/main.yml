@@ -14,6 +14,7 @@ masakari_services:
         external: false
         port: "{{ masakari_api_port }}"
         listen_port: "{{ masakari_api_listen_port }}"
+        tls_backend: "{{ masakari_enable_tls_backend }}"
       masakari_api_external:
         enabled: "{{ enable_masakari }}"
         mode: "http"
@@ -21,6 +22,7 @@ masakari_services:
         external_fqdn: "{{ masakari_external_fqdn }}"
         port: "{{ masakari_api_public_port }}"
         listen_port: "{{ masakari_api_listen_port }}"
+        tls_backend: "{{ masakari_enable_tls_backend }}"
   masakari-engine:
     container_name: masakari_engine
     group: masakari-engine
@@ -184,3 +186,8 @@ libvirt_sasl_authname: "nova"
 # List of enabled libvirt SASL authentication mechanisms.
 libvirt_sasl_mech_list:
   - "{{ 'SCRAM-SHA-256' if libvirt_tls | bool else 'DIGEST-MD5' }}"
+
+####################
+# TLS
+####################
+masakari_enable_tls_backend: "{{ kolla_enable_tls_backend }}"
