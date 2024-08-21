@@ -1,5 +1,14 @@
 {% set gnocchi_log_dir = '/var/log/kolla/gnocchi' %}
 {% set wsgi_path = '/var/lib/kolla/venv/bin' %}
+
+{% if gnocchi_enable_tls_backend | bool %}
+{% if kolla_base_distro in ['centos']  %}
+LoadModule ssl_module /usr/lib64/httpd/modules/mod_ssl.so
+{% else %}
+LoadModule ssl_module /usr/lib/apache2/modules/mod_ssl.so
+{% endif %}
+{% endif %}
+
 Listen {{ api_interface_address | put_address_in_context('url') }}:{{ gnocchi_api_listen_port }}
 
 ServerSignature Off
@@ -30,5 +39,11 @@ LogLevel info
   <Directory "{{ wsgi_path }}">
         Require all granted
   </Directory>
+
+{% if gnocchi_enable_tls_backend | bool %}
+  SSLEngine on
+  SSLCertificateFile /etc/gnocchi/certs/gnocchi-cert.pem
+  SSLCertificateKeyFile /etc/gnocchi/certs/gnocchi-key.pem
+{% endif %}
 
 </VirtualHost>

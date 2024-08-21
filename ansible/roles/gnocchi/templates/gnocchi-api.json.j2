@@ -26,8 +26,19 @@
             "dest": "/etc/ceph",
             "owner": "gnocchi",
             "perm": "0600"
+        }{% endif %}{% if gnocchi_enable_tls_backend %},
+        {
+            "source": "{{ container_config_directory }}/gnocchi-cert.pem",
+            "dest": "/etc/gnocchi/certs/gnocchi-cert.pem",
+            "owner": "gnocchi",
+            "perm": "0600"
+        },
+        {
+            "source": "{{ container_config_directory }}/gnocchi-key.pem",
+            "dest": "/etc/gnocchi/certs/gnocchi-key.pem",
+            "owner": "gnocchi",
+            "perm": "0600"
         }{% endif %}
-
     ],
     "permissions": [
         {

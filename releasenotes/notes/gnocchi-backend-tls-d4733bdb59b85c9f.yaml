@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    Allows backend TLS encryption for Gnocchi connection from loadbalancer
+    using ``gnocchi_enable_tls_backend``, set by default from
+    ``kolla_enable_tls_backend``.

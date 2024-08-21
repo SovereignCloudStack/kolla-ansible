@@ -15,6 +15,7 @@ gnocchi_services:
         external: false
         port: "{{ gnocchi_api_port }}"
         listen_port: "{{ gnocchi_api_listen_port }}"
+        tls_backend: "{{ gnocchi_enable_tls_backend }}"
       gnocchi_api_external:
         enabled: "{{ enable_gnocchi }}"
         mode: "http"
@@ -22,6 +23,7 @@ gnocchi_services:
         external_fqdn: "{{ gnocchi_external_fqdn }}"
         port: "{{ gnocchi_api_public_port }}"
         listen_port: "{{ gnocchi_api_listen_port }}"
+        tls_backend: "{{ gnocchi_enable_tls_backend }}"
   gnocchi-metricd:
     container_name: gnocchi_metricd
     group: gnocchi-metricd
@@ -194,3 +196,8 @@ gnocchi_ks_users:
     role: "admin"
 
 gnocchi_ceph_cluster: "ceph"
+
+####################
+# TLS
+####################
+gnocchi_enable_tls_backend: "{{ kolla_enable_tls_backend }}"
