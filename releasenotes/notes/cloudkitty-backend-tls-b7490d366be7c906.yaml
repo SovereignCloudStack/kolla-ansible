@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    Allows backend TLS encryption for CloudKitty connection from loadbalancer
+    using ``cloudkitty_enable_tls_backend``, set by default from
+    ``kolla_enable_tls_backend``.

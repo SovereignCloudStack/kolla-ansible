@@ -15,6 +15,7 @@ cloudkitty_services:
         external: false
         port: "{{ cloudkitty_api_port }}"
         listen_port: "{{ cloudkitty_api_listen_port }}"
+        tls_backend: "{{ cloudkitty_enable_tls_backend }}"
       cloudkitty_api_external:
         enabled: "{{ enable_cloudkitty }}"
         mode: "http"
@@ -22,6 +23,7 @@ cloudkitty_services:
         external_fqdn: "{{ cloudkitty_external_fqdn }}"
         port: "{{ cloudkitty_api_public_port }}"
         listen_port: "{{ cloudkitty_api_listen_port }}"
+        tls_backend: "{{ cloudkitty_enable_tls_backend }}"
   cloudkitty-processor:
     container_name: "cloudkitty_processor"
     group: "cloudkitty-processor"
@@ -231,3 +233,8 @@ cloudkitty_ks_users:
 
 cloudkitty_ks_roles:
   - "{{ cloudkitty_openstack_keystone_default_role }}"
+
+####################
+# TLS
+####################
+cloudkitty_enable_tls_backend: "{{ kolla_enable_tls_backend }}"

@@ -1,5 +1,14 @@
 {% set cloudkitty_log_dir = '/var/log/kolla/cloudkitty' %}
 {% set binary_path = '/var/lib/kolla/venv/bin' %}
+
+{% if cloudkitty_enable_tls_backend | bool %}
+{% if kolla_base_distro in ['centos']  %}
+LoadModule ssl_module /usr/lib64/httpd/modules/mod_ssl.so
+{% else %}
+LoadModule ssl_module /usr/lib/apache2/modules/mod_ssl.so
+{% endif %}
+{% endif %}
+
 Listen {{ api_interface_address | put_address_in_context('url') }}:{{ cloudkitty_api_port }}
 
 ServerSignature Off
@@ -32,5 +41,10 @@ LogLevel info
             Require all granted
        </FilesMatch>
   </Directory>
+{% if cloudkitty_enable_tls_backend | bool %}
+  SSLEngine on
+  SSLCertificateFile /etc/cloudkitty/certs/cloudkitty-cert.pem
+  SSLCertificateKeyFile /etc/cloudkitty/certs/cloudkitty-key.pem
+{% endif %}
 
 </VirtualHost>

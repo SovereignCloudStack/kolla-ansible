@@ -26,6 +26,18 @@
             "dest": "/etc/cloudkitty/{{ cloudkitty_custom_metrics_yaml_file }}",
             "owner": "cloudkitty",
             "perm": "0600"
+        }{% endif %}{% if cloudkitty_enable_tls_backend %},
+        {
+            "source": "{{ container_config_directory }}/cloudkitty-cert.pem",
+            "dest": "/etc/cloudkitty/certs/cloudkitty-cert.pem",
+            "owner": "cloudkitty",
+            "perm": "0600"
+        },
+        {
+            "source": "{{ container_config_directory }}/cloudkitty-key.pem",
+            "dest": "/etc/cloudkitty/certs/cloudkitty-key.pem",
+            "owner": "cloudkitty",
+            "perm": "0600"
         }{% endif %}
     ],
     "permissions": [
