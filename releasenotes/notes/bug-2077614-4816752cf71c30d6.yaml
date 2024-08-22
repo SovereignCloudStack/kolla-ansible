@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    Fixes 2077614.
+    HAProxy service failed when only backend TLS was enabled and not
+    internal and/or external.
+    `LP#2077614 <https://launchpad.net/bugs/2077614>`

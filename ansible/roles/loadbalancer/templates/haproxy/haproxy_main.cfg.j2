@@ -12,7 +12,7 @@ global
     {% endif %}
     stats socket /var/lib/kolla/haproxy/haproxy.sock group kolla mode 660{% if haproxy_socket_level_admin | bool %} level admin{% endif %}
 
-    {% if kolla_enable_tls_external | bool or kolla_enable_tls_internal | bool %}
+    {% if kolla_enable_tls_external | bool or kolla_enable_tls_internal | bool or kolla_enable_tls_backend | bool %}
     {% for line in haproxy_ssl_settings.split('\n') %}
     {{ line }}
     {% endfor %}
