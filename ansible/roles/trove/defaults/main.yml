@@ -74,15 +74,15 @@ trove_database_shard:
 ####################
 trove_tag: "{{ openstack_tag }}"
 
-trove_conductor_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/trove-conductor"
+trove_conductor_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/{{ docker_image_name_prefix }}trove-conductor"
 trove_conductor_tag: "{{ trove_tag }}"
 trove_conductor_image_full: "{{ trove_conductor_image }}:{{ trove_conductor_tag }}"
 
-trove_api_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/trove-api"
+trove_api_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/{{ docker_image_name_prefix }}trove-api"
 trove_api_tag: "{{ trove_tag }}"
 trove_api_image_full: "{{ trove_api_image }}:{{ trove_api_tag }}"
 
-trove_taskmanager_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/trove-taskmanager"
+trove_taskmanager_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/{{ docker_image_name_prefix }}trove-taskmanager"
 trove_taskmanager_tag: "{{ trove_tag }}"
 trove_taskmanager_image_full: "{{ trove_taskmanager_image }}:{{ trove_taskmanager_tag }}"
 
@@ -134,21 +134,21 @@ trove_api_default_volumes:
   - "/etc/localtime:/etc/localtime:ro"
   - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "kolla_logs:/var/log/kolla/"
-  - "{{ kolla_dev_repos_directory ~ '/trove/trove:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/trove' if trove_dev_mode | bool else '' }}"
+  - "{{ kolla_dev_repos_directory ~ '/trove:/dev-mode/trove' if trove_dev_mode | bool else '' }}"
   - "trove:/var/lib/trove/"
 trove_conductor_default_volumes:
   - "{{ node_config_directory }}/trove-conductor/:{{ container_config_directory }}/:ro"
   - "/etc/localtime:/etc/localtime:ro"
   - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "kolla_logs:/var/log/kolla/"
-  - "{{ kolla_dev_repos_directory ~ '/trove/trove:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/trove' if trove_dev_mode | bool else '' }}"
+  - "{{ kolla_dev_repos_directory ~ '/trove:/dev-mode/trove' if trove_dev_mode | bool else '' }}"
   - "trove:/var/lib/trove/"
 trove_taskmanager_default_volumes:
   - "{{ node_config_directory }}/trove-taskmanager/:{{ container_config_directory }}/:ro"
   - "/etc/localtime:/etc/localtime:ro"
   - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "kolla_logs:/var/log/kolla/"
-  - "{{ kolla_dev_repos_directory ~ '/trove/trove:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/trove' if trove_dev_mode | bool else '' }}"
+  - "{{ kolla_dev_repos_directory ~ '/trove:/dev-mode/trove' if trove_dev_mode | bool else '' }}"
   - "trove:/var/lib/trove/"
 
 trove_extra_volumes: "{{ default_extra_volumes }}"

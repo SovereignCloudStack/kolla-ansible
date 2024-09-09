@@ -179,12 +179,6 @@ function create_instance {
 function resize_instance {
     local name=$1
 
-    # TODO(priteau): Remove once previous_release includes m2.tiny in
-    # init-runonce
-    if ! openstack flavor list -f value | grep m2.tiny; then
-        openstack flavor create --id 6 --ram 512 --disk 1 --vcpus 2 m2.tiny
-    fi
-
     openstack server resize --flavor m2.tiny --wait ${name}
     # If the status is not VERIFY_RESIZE, print info and exit 1
     if [[ $(openstack server show ${name} -f value -c status) != "VERIFY_RESIZE" ]]; then
@@ -206,7 +200,7 @@ function resize_instance {
             openstack --debug server show ${name}
             return 1
         fi
-        sleep 1
+        sleep 2
     done
 }
 
@@ -246,7 +240,7 @@ function unset_cirros_image_q35_machine_type {
 
 function test_neutron_modules {
     # Exit the function if scenario is "ovn" or if there's an upgrade
-    # as inly concerns ml2/ovs
+    # as it only concerns ml2/ovs
     if [[ $SCENARIO == "ovn" ]] || [[ $HAS_UPGRADE == "yes" ]]; then
         return
     fi
@@ -447,6 +441,17 @@ function test_internal_dns_integration {
         openstack server create --image cirros --flavor m1.tiny --network dns-test-network ${SERVER_NAME}
 
         SERVER_ID=$(openstack server show ${SERVER_NAME} -f value -c id)
+        attempt=0
+        while [[ -z $(openstack port list --device-id ${SERVER_ID} -f value -c ID) ]]; do
+            echo "Port for server ${SERVER_NAME} not available yet"
+            attempt=$((attempt+1))
+            if [[ $attempt -eq 10 ]]; then
+                echo "ERROR: Port for server ${SERVER_NAME} failed to become available"
+                openstack port list --device-id ${SERVER_ID}
+                return 1
+            fi
+            sleep $attempt
+        done
         PORT_ID=$(openstack port list --device-id ${SERVER_ID} -f value -c ID)
 
         DNS_ASSIGNMENT=$(openstack port show ${PORT_ID} -f json -c dns_assignment)

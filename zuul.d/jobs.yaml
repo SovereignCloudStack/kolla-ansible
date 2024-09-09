@@ -45,15 +45,6 @@
       container_engine: podman
 
 - job:
-    name: kolla-ansible-openeuler
-    parent: kolla-ansible-base
-    nodeset: kolla-ansible-openeuler-22.03-lts
-    voting: false
-    vars:
-      base_distro: ubuntu
-      tls_enabled: true
-
-- job:
     name: kolla-ansible-rocky9
     parent: kolla-ansible-base
     nodeset: kolla-ansible-rocky9
@@ -173,7 +164,7 @@
 - job:
     name: kolla-ansible-debian-upgrade
     parent: kolla-ansible-base
-    nodeset: kolla-ansible-debian-bullseye
+    nodeset: kolla-ansible-debian-bookworm
     timeout: 10800
     vars:
       base_distro: debian
@@ -183,7 +174,7 @@
 - job:
     name: kolla-ansible-debian-slurp-upgrade
     parent: kolla-ansible-base
-    nodeset: kolla-ansible-debian-bullseye
+    nodeset: kolla-ansible-debian-bookworm
     timeout: 9000
     branches: master
     vars:
@@ -196,7 +187,7 @@
 - job:
     name: kolla-ansible-debian-upgrade-aarch64
     parent: kolla-ansible-debian-upgrade
-    nodeset: kolla-ansible-debian-bullseye-aarch64
+    nodeset: kolla-ansible-debian-bookworm-aarch64
 
 - job:
     name: kolla-ansible-ubuntu-upgrade
@@ -560,6 +551,20 @@
 - job:
     name: kolla-ansible-rocky9-skyline
     parent: kolla-ansible-skyline-base
+    nodeset: kolla-ansible-rocky9
+    vars:
+      base_distro: rocky
+
+- job:
+    name: kolla-ansible-ubuntu-skyline-sso
+    parent: kolla-ansible-skyline-sso-base
+    nodeset: kolla-ansible-jammy
+    vars:
+      base_distro: ubuntu
+
+- job:
+    name: kolla-ansible-rocky9-skyline-sso
+    parent: kolla-ansible-skyline-sso-base
     nodeset: kolla-ansible-rocky9
     vars:
       base_distro: rocky

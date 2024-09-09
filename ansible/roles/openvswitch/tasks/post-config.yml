@@ -1,6 +1,6 @@
 ---
 # NOTE(mnasiadka): external_ids:system-id uniquely identifies a physical system, used by OVN and other controllers
-- name: Set system-id and hw-offload
+- name: Set system-id, hostname and hw-offload
   become: true
   kolla_toolbox:
     container_engine: "{{ kolla_container_engine }}"

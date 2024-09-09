@@ -8,6 +8,7 @@
 - name: Get container facts
   become: true
   kolla_container_facts:
+    action: get_containers
     container_engine: "{{ kolla_container_engine }}"
     name:
       - cinder_api
@@ -42,6 +43,7 @@
     - not enable_cinder_backend_pure_iscsi | bool
     - not enable_cinder_backend_pure_fc | bool
     - not enable_cinder_backend_pure_roce | bool
+    - not enable_cinder_backend_pure_nvme_tcp | bool
 
 - name: Checking LVM volume group exists for Cinder
   become: true

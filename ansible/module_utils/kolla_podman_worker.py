@@ -24,18 +24,18 @@ CONTAINER_PARAMS = [
     'name',             # string
     'cap_add',          # list
     'cgroupns',         # 'str',choices=['private', 'host']
-    'command',          # arrray of strings  -- docker string
+    'command',          # array of strings  -- docker string
 
     # this part is hidden inside dimensions
     'cpu_period',       # int
     'cpu_quota',        # int
     'cpuset_cpus',      # str
-    'cpu_shares'        # int
+    'cpu_shares',       # int
     'cpuset_mems',      # str
     'kernel_memory',    # int or string
     'mem_limit',        # (Union[int, str])
     'mem_reservation',  # (Union[int, str]): Memory soft limit.
-    'memswap_limit'     # (Union[int, str]): Maximum amount of memory
+    'memswap_limit',    # (Union[int, str]): Maximum amount of memory
                         # + swap a container is allowed to consume.
     'ulimits',          # List[Ulimit]
     'blkio_weight',     # int between 10 and 1000
@@ -49,17 +49,17 @@ CONTAINER_PARAMS = [
     'ipc_mode',         # string only option is host
 
     'labels',           # dict
-    'netns',            # dict # TODO(i.halomi) - not sure how it works
+    'netns',            # dict
     'network_options',  # string - none,bridge,host,container:id,
                         # missing in docker but needs to be host
     'pid_mode',         # "string"  host, private or ''
     'privileged',       # bool
     'restart_policy',   # set to none, handled by systemd
     'remove',           # bool
-    'restart_tries',    # int doesnt matter done by systemd
+    'restart_tries',    # int doesn't matter done by systemd
     'stop_timeout',     # int
-    'tty'               # bool
-    # VOLUMES NOT WORKING HAS TO BE DONE WITH MOUNTS
+    'tty',              # bool
+    # volumes need to be parsed, see parse_volumes() for more info
     'volumes',          # array of dict
     'volumes_from',     # array of strings
 ]
@@ -104,7 +104,8 @@ class PodmanWorker(ContainerWorker):
         if healthcheck:
             healthcheck = self.parse_healthcheck(healthcheck)
             self.params.pop('healthcheck', None)
-            args.update(healthcheck)
+            if healthcheck:
+                args.update(healthcheck)
 
         # getting dimensions into separate parameters
         dimensions = self.params.get('dimensions')
@@ -145,6 +146,10 @@ class PodmanWorker(ContainerWorker):
 
         return args
 
+    # NOTE(i.halomi): Podman encounters issues parsing and setting
+    # permissions for a mix of volumes and binds when sent together.
+    # Therefore, we must parse them and set the permissions ourselves
+    # and send them to API separately.
     def parse_volumes(self, volumes, mounts, filtered_volumes):
         # we can ignore empty strings
         volumes = [item for item in volumes if item.strip()]
@@ -177,7 +182,11 @@ class PodmanWorker(ContainerWorker):
                 mounts.append(mount_item)
             else:
                 try:
-                    src, dest = item.split(':')
+                    mode = 'rw'
+                    if item.count(':') == 2:
+                        src, dest, mode = item.split(':')
+                    else:
+                        src, dest = item.split(':')
                 except ValueError:
                     self.module.fail_json(
                         msg="Wrong format of volume: {}".format(item),
@@ -192,7 +201,7 @@ class PodmanWorker(ContainerWorker):
                 else:
                     filtered_volumes[src] = dict(
                         bind=dest,
-                        mode='rw'
+                        mode=mode
                     )
 
     def parse_dimensions(self, dimensions):
@@ -390,10 +399,10 @@ class PodmanWorker(ContainerWorker):
     def compare_dimensions(self, container_info):
         new_dimensions = self.params.get('dimensions')
 
-        # NOTE(mgoddard): The names used by Docker are inconsisent between
-        # configuration of a container's resources and the resources in
-        # container_info['HostConfig']. This provides a mapping between the
-        # two.
+        # NOTE(mgoddard): The names used by Docker/Podman are inconsistent
+        # between configuration of a container's resources and
+        # the resources in container_info['HostConfig'].
+        # This provides a mapping between the two.
         dimension_map = {
             'mem_limit': 'Memory', 'mem_reservation': 'MemoryReservation',
             'memswap_limit': 'MemorySwap', 'cpu_period': 'CpuPeriod',
@@ -432,6 +441,9 @@ class PodmanWorker(ContainerWorker):
 
             rc, raw_output = container.exec_run(COMPARE_CONFIG_CMD,
                                                 user='root')
+        # APIError means either container doesn't exist or exec command
+        # failed, which means that container is in bad state and we can
+        # expect that config is stale so we return True and recreate container
         except APIError as e:
             if e.is_client_error():
                 return True

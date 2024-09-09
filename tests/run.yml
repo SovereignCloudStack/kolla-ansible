@@ -164,6 +164,7 @@
       become: "{{ item.become | default(false) }}"
       vars:
         is_previous_release: "{{ is_upgrade }}"
+        force_config_drive: "{{ 'true' if address_family == 'ipv6' else 'false' }}"
       with_items:
         # Ansible inventory
         - src: "tests/templates/inventory.j2"
@@ -242,9 +243,18 @@
         state: directory
       become: true
 
+    - name: Install Python3.12 on RHEL derivatives
+      dnf:
+        name:
+          - python3.12
+          - python3.12-devel
+        state: latest
+      when: ansible_facts.os_family == 'RedHat'
+      become: true
+
     - name: Create Kolla Ansible venv
       command:
-        cmd: "python3 -m venv {{ kolla_ansible_venv_path }}"
+        cmd: "{{ 'python3.12' if ansible_facts.os_family == 'RedHat' else 'python3' }} -m venv {{ kolla_ansible_venv_path }}"
         creates: "{{ kolla_ansible_venv_path }}"
 
     - name: Ensure the latest tested pip
@@ -267,14 +277,6 @@
           - "ansible-core{{ ansible_core_version_constraint }}"
           - "ara[server]<1.7"
         virtualenv: "{{ kolla_ansible_venv_path }}"
-
-    # TODO(mnasiadka): Remove in D
-    - name: Install Ansible on SLURP upgrade only
-      pip:
-        extra_args: "-c {{ upper_constraints_file }}"
-        name: "ansible{{ ansible_version_constraint }}"
-        virtualenv: "{{ kolla_ansible_venv_path }}"
-      when: is_slurp
 
     - name: Install Ansible collections
       shell: |
@@ -357,7 +359,7 @@
         KOLLA_SWIFT_BASE_IMAGE: "{{ docker_image_prefix }}swift-base:{{ docker_image_tag }}"
         # NOTE(yoctozepto): no IPv6 for now
         STORAGE_NODES: "{{ groups['all'] | map('extract', hostvars,
-                           ['ansible_'+api_interface_name, 'ipv4', 'address'])
+                           ['ansible_'+api_interface_name | replace('-','_') , 'ipv4', 'address'])
                            | join(' ') }}"
         CONTAINER_ENGINE: "{{ container_engine }}"
       when: scenario == 'swift'
@@ -577,6 +579,13 @@
             chdir: "{{ kolla_ansible_src_dir }}"
           when: scenario == "skyline"
 
+        - name: Run test-skyline-sso.sh script
+          script:
+            cmd: test-skyline-sso.sh
+            executable: /bin/bash
+            chdir: "{{ kolla_ansible_src_dir }}"
+          when: scenario == "skyline-sso"
+
       when: scenario != "bifrost"
 
 # NOTE(yoctozepto): each host checks itself
@@ -648,6 +657,7 @@
             dest: "{{ item.dest }}"
           vars:
             is_previous_release: false
+            force_config_drive: "{{ 'true' if address_family == 'ipv6' else 'false' }}"
           with_items:
             # Ansible inventory
             - src: "tests/templates/inventory.j2"
@@ -848,6 +858,8 @@
         chdir: "{{ kolla_ansible_src_dir }}"
       environment:
         KOLLA_ANSIBLE_VENV_PATH: "{{ kolla_ansible_venv_path }}"
+        SCENARIO: "{{ scenario }}"
+        CONTAINER_ENGINE: "{{ container_engine }}"
       when:
         - not is_upgrade
         - scenario != "bifrost"

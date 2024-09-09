@@ -13,7 +13,7 @@ transport_url = {{ rpc_transport_url }}
 transport_url = {{ notify_transport_url }}
 
 [oslo_messaging_rabbit]
-heartbeat_in_pthread = true
+heartbeat_in_pthread = false
 {% if om_enable_rabbitmq_tls | bool %}
 ssl = true
 ssl_ca_file = {{ om_rabbitmq_cacert }}
@@ -92,4 +92,9 @@ backend_url = {{ redis_connection_string }}
 # NOTE(jan.gutter): etcd v3.4 removed the default `v3alpha` api_version. Until
 # tooz defaults to a newer version, we should explicitly specify `v3`
 backend_url = etcd3+{{ internal_protocol }}://{{ kolla_internal_fqdn }}:{{ etcd_client_port }}?api_version=v3{% if openstack_cacert %}?ca_cert={{ openstack_cacert }}{% endif %}
+{% endif %}
+
+{% if ironic_inspector_known_devices_file_path is defined %}
+[accelerators]
+known_devices = /etc/ironic-inspector/known_devices.yaml
 {% endif %}

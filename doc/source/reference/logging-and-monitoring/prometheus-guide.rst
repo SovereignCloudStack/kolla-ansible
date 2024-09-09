@@ -40,9 +40,9 @@ Basic Auth
 Prometheus is protected with basic HTTP authentication. Kolla-ansible will
 create the following users: ``admin``, ``grafana`` (if grafana is
 enabled) and ``skyline`` (if skyline is enabled). The grafana username can
-be overidden using the variable
+be overridden using the variable
 ``prometheus_grafana_user``, the skyline username can
-be overidden using the variable ``prometheus_skyline_user``.
+be overridden using the variable ``prometheus_skyline_user``.
 The passwords are defined by the
 ``prometheus_password``, ``prometheus_grafana_password`` and
 ``prometheus_skyline_password`` variables in
@@ -56,7 +56,7 @@ The passwords are defined by the
         password: hello
         enabled: true
 
-or completely overriden with the ``prometheus_basic_auth_users`` variable.
+or completely overridden with the ``prometheus_basic_auth_users`` variable.
 
 Extending the default command line options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -106,7 +106,7 @@ following:
       static_configs:
         - targets:
   {% for host in groups['prometheus'] %}
-          - '{{ hostvars[host]['ansible_' + hostvars[host]['api_interface']]['ipv4']['address'] }}:{{ 3456 }}'
+          - '{{ hostvars[host][('ansible_' + hostvars[host]['api_interface'] | replace('-','_'))]['ipv4']['address'] }}:{{ 3456 }}'
   {% endfor %}
 
 The jobs, ``custom``, and ``custom_template``  would be appended to the default
@@ -124,7 +124,7 @@ Extra files
 
 Sometimes it is necessary to reference additional files from within
 ``prometheus.yml``, for example, when defining file service discovery
-configuration. To enable you to do this, kolla-ansible will resursively
+configuration. To enable you to do this, kolla-ansible will recursively
 discover any files in ``{{ node_custom_config }}/prometheus/extras`` and
 template them. The templated output is then copied to
 ``/etc/prometheus/extras`` within the container on startup. For example to
@@ -217,3 +217,29 @@ sure to set the ``prometheus_instance_label`` variable to ``None``.
    This feature may generate duplicate metrics temporarily while Prometheus
    updates the metric labels. Please be aware of this while analyzing metrics
    during the transition period.
+
+Exporter configuration
+~~~~~~~~~~~~~~~~~~~~~~
+
+Node Exporter
+-------------
+
+Sometimes it can be useful to monitor hosts outside of the Kolla deployment.
+One method of doing this is to configure a list of additional targets using the
+``prometheus_node_exporter_targets_extra`` variable.  The format of which
+should be a list of dictionaries with the following keys:
+
+* target: URL of node exporter to scrape
+* labels: (Optional) A list of labels to set on the metrics scaped from this
+  exporter.
+
+For example:
+
+.. code-block:: yaml
+  :caption: ``/etc/kolla/globals.yml``
+
+  prometheus_node_exporter_targets_extra:
+    - target: http://10.0.0.1:1234
+      labels:
+        instance: host1
+

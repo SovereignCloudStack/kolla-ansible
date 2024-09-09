@@ -1,12 +1,7 @@
 {
-    "command": "start-ovs",
+    "command": "ovs_wrapper ovs-vswitchd unix:/run/openvswitch/db.sock -vconsole:emer -vsyslog:err -vfile:info --mlockall --log-file=/var/log/kolla/openvswitch/ovs-vswitchd.log --pidfile",
     "config_files": [
-        {
-            "source": "{{ container_config_directory }}/start-ovs",
-            "dest": "/usr/local/bin/start-ovs",
-            "owner": "root",
-            "perm": "0655"
-        }{% if neutron_ovs_use_certificates %},
+        {% if neutron_ovs_use_certificates %}{
         {
             "source": "{{ container_config_directory }}/root.pem",
             "dest": "/etc/openvswitch/root.pem",
@@ -24,7 +19,6 @@
             "dest": "/etc/openvswitch/key.pem",
             "owner": "root",
             "perm": "0660"
-        }
-        {% endif %}
+        }{% endif %}
     ]
 }

@@ -1,13 +1,9 @@
 ---
-{% if ansible_os_family == 'Debian' or ansible_facts.distribution == "openEuler" %}
-# Force the use of python3 on Debian, Ubuntu and openEuler remote hosts. These distros
+{% if ansible_os_family == 'Debian' %}
+# Force the use of python3 on Debian and Ubuntu remote hosts. These distros
 # typically have an unversioned Python interpreter which links to python2.7.
 ansible_python_interpreter: /usr/bin/python3
 {% endif %}
-
-# NOTE(yoctozepto): In CI it makes sense to always try to fail
-# as early as possible.
-kolla_ansible_setup_any_errors_fatal: true
 
 kolla_base_distro: "{{ base_distro }}"
 network_interface: "{{ api_interface_name }}"
@@ -36,10 +32,6 @@ docker_registry_mirrors:
 docker_custom_config:
   insecure-registries:
     - primary:4000
-{% endif %}
-{% if ansible_facts.distribution == "openEuler" %}
-docker_custom_config:
-  exec-opts: ["native.umask=normal"]
 {% endif %}
 {% endif %}
 
@@ -70,7 +62,7 @@ openstack_service_rpc_workers: "1"
 {% endif %}
 
 {% if need_build_image and not is_previous_release %}
-# NOTE(Jeffrey4l): use different a docker namespace name in case it pull image from hub.docker.io when deplying
+# NOTE(Jeffrey4l): use different a docker namespace name in case it pull image from hub.docker.io when deploying
 docker_namespace: "lokolla"
 # NOTE(yoctozepto): use hostname or FQDN to be compatible between IPv4 and IPv6
 # docker does not support referencing registry via an IPv6 address
@@ -245,7 +237,7 @@ horizon_external_fqdn: "horizon.external"
 keystone_external_fqdn: "keystone.external"
 neutron_external_fqdn: "neutron.external"
 nova_external_fqdn: "nova.external"
-nova_novncproxy_external_fqdn: "novncproxy.external"
+nova_novncproxy_fqdn: "novncproxy.external"
 placement_external_fqdn: "placement.external"
 {% endif %}
 
@@ -263,9 +255,7 @@ kolla_admin_openrc_cacert: "{% raw %}{{ kolla_certificates_dir }}{% endraw %}/ca
 enable_skyline: "yes"
 {% endif %}
 
-{# Workaround for https://github.com/rabbitmq/rabbitmq-server/issues/10728 #}
-{% if address_family == 'ipv6' %}
-{% raw %}
-rabbitmq_tag: "2023.2-{{ kolla_base_distro }}-{{ kolla_base_distro_version }}{{ openstack_tag_suffix }}"
-{% endraw %}
+{% if scenario == "skyline-sso" %}
+enable_skyline: "yes"
+skyline_enable_sso: "yes"
 {% endif %}

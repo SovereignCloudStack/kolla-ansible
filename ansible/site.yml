@@ -33,7 +33,6 @@
         - enable_cyborg_{{ enable_cyborg | bool }}
         - enable_designate_{{ enable_designate | bool }}
         - enable_etcd_{{ enable_etcd | bool }}
-        - enable_freezer_{{ enable_freezer | bool }}
         - enable_glance_{{ enable_glance | bool }}
         - enable_gnocchi_{{ enable_gnocchi | bool }}
         - enable_grafana_{{ enable_grafana | bool }}
@@ -54,29 +53,23 @@
         - enable_memcached_{{ enable_memcached | bool }}
         - enable_mistral_{{ enable_mistral | bool }}
         - enable_multipathd_{{ enable_multipathd | bool }}
-        - enable_murano_{{ enable_murano | bool }}
         - enable_neutron_{{ enable_neutron | bool }}
         - enable_nova_{{ enable_nova | bool }}
         - enable_octavia_{{ enable_octavia | bool }}
         - enable_opensearch_{{ enable_opensearch | bool }}
         - enable_opensearch_dashboards_{{ enable_opensearch_dashboards | bool }}
         - enable_openvswitch_{{ enable_openvswitch | bool }}_enable_ovs_dpdk_{{ enable_ovs_dpdk | bool }}
-        - enable_outward_rabbitmq_{{ enable_outward_rabbitmq | bool }}
         - enable_ovn_{{ enable_ovn | bool }}
         - enable_placement_{{ enable_placement | bool }}
         - enable_prometheus_{{ enable_prometheus | bool }}
         - enable_rabbitmq_{{ enable_rabbitmq | bool }}
         - enable_redis_{{ enable_redis | bool }}
-        - enable_sahara_{{ enable_sahara | bool }}
-        - enable_senlin_{{ enable_senlin | bool }}
         - enable_skyline_{{ enable_skyline | bool }}
-        - enable_solum_{{ enable_solum | bool }}
         - enable_swift_{{ enable_swift | bool }}
         - enable_tacker_{{ enable_tacker | bool }}
         - enable_telegraf_{{ enable_telegraf | bool }}
         - enable_trove_{{ enable_trove | bool }}
         - enable_venus_{{ enable_venus | bool }}
-        - enable_vitrage_{{ enable_vitrage | bool }}
         - enable_watcher_{{ enable_watcher | bool }}
         - enable_zun_{{ enable_zun | bool }}
   tags: always
@@ -173,11 +166,6 @@
           tags: etcd
           when: enable_etcd | bool
         - include_role:
-            name: freezer
-            tasks_from: loadbalancer
-          tags: freezer
-          when: enable_freezer | bool
-        - include_role:
             name: glance
             tasks_from: loadbalancer
           tags: glance
@@ -253,11 +241,6 @@
           tags: mistral
           when: enable_mistral | bool
         - include_role:
-            name: murano
-            tasks_from: loadbalancer
-          tags: murano
-          when: enable_murano | bool
-        - include_role:
             name: neutron
             tasks_from: loadbalancer
           tags: neutron
@@ -302,27 +285,12 @@
           vars:
             role_rabbitmq_cluster_cookie:
             role_rabbitmq_groups:
-          when: enable_rabbitmq | bool or enable_outward_rabbitmq | bool
-        - include_role:
-            name: sahara
-            tasks_from: loadbalancer
-          tags: sahara
-          when: enable_sahara | bool
-        - include_role:
-            name: senlin
-            tasks_from: loadbalancer
-          tags: senlin
-          when: enable_senlin | bool
+          when: enable_rabbitmq | bool
         - include_role:
             name: skyline
             tasks_from: loadbalancer
           tags: skyline
           when: enable_skyline | bool
-        - include_role:
-            name: solum
-            tasks_from: loadbalancer
-          tags: solum
-          when: enable_solum | bool
         - include_role:
             name: swift
             tasks_from: loadbalancer
@@ -343,11 +311,6 @@
             tasks_from: loadbalancer
           tags: venus
           when: enable_venus | bool
-        - include_role:
-            name: vitrage
-            tasks_from: loadbalancer
-          tags: vitrage
-          when: enable_vitrage | bool
         - include_role:
             name: watcher
             tasks_from: loadbalancer
@@ -637,10 +600,6 @@
     - { role: placement,
         tags: placement }
 
-# Nova deployment is more complicated than other services, so is covered in its
-# own playbook.
-- import_playbook: nova.yml
-
 - name: Apply role openvswitch
   gather_facts: false
   hosts:
@@ -700,6 +659,10 @@
   roles:
     - { role: ovn-db,
         tags: [ovn, ovn-db] }
+
+# Nova deployment is more complicated than other services, so is covered in its
+# own playbook.
+- import_playbook: nova.yml
 
 - name: Apply role neutron
   gather_facts: false
@@ -784,40 +747,6 @@
     - { role: horizon,
         tags: horizon }
 
-- name: Apply role murano
-  gather_facts: false
-  hosts:
-    - murano-api
-    - murano-engine
-    - '&enable_murano_True'
-  serial: '{{ kolla_serial|default("0") }}'
-  max_fail_percentage: >-
-    {{ murano_max_fail_percentage |
-       default(kolla_max_fail_percentage) |
-       default(100) }}
-  roles:
-    - { role: murano,
-        tags: murano }
-
-- name: Apply role solum
-  gather_facts: false
-  hosts:
-    - solum-api
-    - solum-worker
-    - solum-deployer
-    - solum-conductor
-    - solum-application-deployment
-    - solum-image-builder
-    - '&enable_solum_True'
-  serial: '{{ kolla_serial|default("0") }}'
-  max_fail_percentage: >-
-    {{ solum_max_fail_percentage |
-       default(kolla_max_fail_percentage) |
-       default(100) }}
-  roles:
-    - { role: solum,
-        tags: solum }
-
 - name: Apply role magnum
   gather_facts: false
   hosts:
@@ -849,21 +778,6 @@
   roles:
     - { role: mistral,
         tags: mistral }
-
-- name: Apply role sahara
-  gather_facts: false
-  hosts:
-    - sahara-api
-    - sahara-engine
-    - '&enable_sahara_True'
-  serial: '{{ kolla_serial|default("0") }}'
-  max_fail_percentage: >-
-    {{ sahara_max_fail_percentage |
-       default(kolla_max_fail_percentage) |
-       default(100) }}
-  roles:
-    - { role: sahara,
-        tags: sahara }
 
 - name: Apply role manila
   gather_facts: false
@@ -1045,38 +959,6 @@
     - { role: cloudkitty,
         tags: cloudkitty }
 
-- name: Apply role freezer
-  gather_facts: false
-  hosts:
-    - freezer-api
-    - freezer-scheduler
-    - '&enable_freezer_True'
-  serial: '{{ kolla_serial|default("0") }}'
-  max_fail_percentage: >-
-    {{ freezer_max_fail_percentage |
-       default(kolla_max_fail_percentage) |
-       default(100) }}
-  roles:
-    - { role: freezer,
-        tags: freezer }
-
-- name: Apply role senlin
-  gather_facts: false
-  hosts:
-    - senlin-api
-    - senlin-conductor
-    - senlin-engine
-    - senlin-health-manager
-    - '&enable_senlin_True'
-  serial: '{{ kolla_serial|default("0") }}'
-  max_fail_percentage: >-
-    {{ senlin_max_fail_percentage |
-       default(kolla_max_fail_percentage) |
-       default(100) }}
-  roles:
-    - { role: senlin,
-        tags: senlin }
-
 - name: Apply role tacker
   gather_facts: false
   hosts:
@@ -1125,24 +1007,6 @@
   roles:
     - { role: zun,
         tags: zun }
-
-- name: Apply role vitrage
-  gather_facts: false
-  hosts:
-    - vitrage-api
-    - vitrage-graph
-    - vitrage-notifier
-    - vitrage-ml
-    - vitrage-persistor
-    - '&enable_vitrage_True'
-  serial: '{{ kolla_serial|default("0") }}'
-  max_fail_percentage: >-
-    {{ vitrage_max_fail_percentage |
-       default(kolla_max_fail_percentage) |
-       default(100) }}
-  roles:
-    - { role: vitrage,
-        tags: vitrage }
 
 - name: Apply role blazar
   gather_facts: false

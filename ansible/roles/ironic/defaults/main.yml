@@ -133,27 +133,27 @@ ironic_database_shard:
 ####################
 ironic_tag: "{{ openstack_tag }}"
 
-ironic_api_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/ironic-api"
+ironic_api_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/{{ docker_image_name_prefix }}ironic-api"
 ironic_api_tag: "{{ ironic_tag }}"
 ironic_api_image_full: "{{ ironic_api_image }}:{{ ironic_api_tag }}"
 
-ironic_conductor_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/ironic-conductor"
+ironic_conductor_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/{{ docker_image_name_prefix }}ironic-conductor"
 ironic_conductor_tag: "{{ ironic_tag }}"
 ironic_conductor_image_full: "{{ ironic_conductor_image }}:{{ ironic_conductor_tag }}"
 
-ironic_pxe_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/ironic-pxe"
+ironic_pxe_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/{{ docker_image_name_prefix }}ironic-pxe"
 ironic_pxe_tag: "{{ ironic_tag }}"
 ironic_pxe_image_full: "{{ ironic_pxe_image }}:{{ ironic_pxe_tag }}"
 
-ironic_inspector_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/ironic-inspector"
+ironic_inspector_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/{{ docker_image_name_prefix }}ironic-inspector"
 ironic_inspector_tag: "{{ ironic_tag }}"
 ironic_inspector_image_full: "{{ ironic_inspector_image }}:{{ ironic_inspector_tag }}"
 
-ironic_dnsmasq_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/dnsmasq"
+ironic_dnsmasq_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/{{ docker_image_name_prefix }}dnsmasq"
 ironic_dnsmasq_tag: "{{ ironic_tag }}"
 ironic_dnsmasq_image_full: "{{ ironic_dnsmasq_image }}:{{ ironic_dnsmasq_tag }}"
 
-ironic_prometheus_exporter_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/ironic-prometheus-exporter"
+ironic_prometheus_exporter_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/{{ docker_image_name_prefix }}ironic-prometheus-exporter"
 ironic_prometheus_exporter_tag: "{{ ironic_tag }}"
 ironic_prometheus_exporter_image_full: "{{ ironic_prometheus_exporter_image }}:{{ ironic_prometheus_exporter_tag }}"
 
@@ -222,7 +222,7 @@ ironic_api_default_volumes:
   - "/etc/localtime:/etc/localtime:ro"
   - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "kolla_logs:/var/log/kolla"
-  - "{{ kolla_dev_repos_directory ~ '/ironic/ironic:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/ironic' if ironic_dev_mode | bool else '' }}"
+  - "{{ kolla_dev_repos_directory ~ '/ironic:/dev-mode/ironic' if ironic_dev_mode | bool else '' }}"
 ironic_conductor_default_volumes:
   - "{{ node_config_directory }}/ironic-conductor/:{{ container_config_directory }}/:ro"
   - "/etc/localtime:/etc/localtime:ro"
@@ -233,8 +233,8 @@ ironic_conductor_default_volumes:
   - "/run:/run{{ ':shared' if kolla_container_engine == 'docker' else '' }}"
   - "kolla_logs:/var/log/kolla"
   - "ironic:/var/lib/ironic"
-  - "{{ kolla_dev_repos_directory ~ '/ironic/ironic:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/ironic' if ironic_dev_mode | bool else '' }}"
-  - "ironic_prometheus_exporter_data:/var/lib/ironic/metrics"
+  - "{{ kolla_dev_repos_directory ~ '/ironic:/dev-mode/ironic' if ironic_dev_mode | bool else '' }}"
+  - "{{ 'ironic_prometheus_exporter_data:/var/lib/ironic/metrics' if enable_ironic_prometheus_exporter | bool else '' }}"
 ironic_tftp_default_volumes:
   - "{{ node_config_directory }}/ironic-tftp/:{{ container_config_directory }}/:ro"
   - "/etc/localtime:/etc/localtime:ro"
@@ -253,7 +253,7 @@ ironic_inspector_default_volumes:
   - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "kolla_logs:/var/log/kolla"
   - "ironic_inspector_dhcp_hosts:/var/lib/ironic-inspector/dhcp-hostsdir"
-  - "{{ kolla_dev_repos_directory ~ '/ironic-inspector/ironic_inspector:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/ironic_inspector' if ironic_inspector_dev_mode | bool else '' }}"
+  - "{{ kolla_dev_repos_directory ~ '/ironic-inspector:/dev-mode/ironic-inspector' if ironic_inspector_dev_mode | bool else '' }}"
 ironic_dnsmasq_default_volumes:
   - "{{ node_config_directory }}/ironic-dnsmasq/:{{ container_config_directory }}/:ro"
   - "/etc/localtime:/etc/localtime:ro"
