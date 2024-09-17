@@ -15,7 +15,11 @@ api_interface = internal
 
 {% if service_name == 'masakari-instancemonitor' %}
 [libvirt]
+{% if libvirt_tls | bool %}
+connection_uri = "qemu+tls://{{ masakari_libvirt_hostname | put_address_in_context('url') }}/system?pkipath=/etc/pki/libvirt"
+{% else %}
 connection_uri = "qemu+tcp://{{ migration_interface_address | put_address_in_context('url') }}/system"
+{% endif %}
 {% endif %}
 
 {% if service_name == 'masakari-hostmonitor' %}

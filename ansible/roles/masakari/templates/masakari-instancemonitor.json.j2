@@ -12,6 +12,24 @@
             "dest": "/var/lib/masakari/.config/libvirt/auth.conf",
             "owner": "masakari",
             "perm": "0600"
+        }{% endif %}{% if libvirt_tls %},
+        {
+            "source": "{{ container_config_directory }}/clientkey.pem",
+            "dest": "/etc/pki/libvirt/clientkey.pem",
+            "owner": "masakari",
+            "perm": "0600"
+        },
+        {
+            "source": "{{ container_config_directory }}/clientcert.pem",
+            "dest": "/etc/pki/libvirt/clientcert.pem",
+            "owner": "masakari",
+            "perm": "0600"
+        },
+        {
+            "source": "{{ container_config_directory }}/cacert.pem",
+            "dest": "/etc/pki/libvirt/cacert.pem",
+            "owner": "masakari",
+            "perm": "0600"
         }{% endif %}
     ],
     "permissions": [

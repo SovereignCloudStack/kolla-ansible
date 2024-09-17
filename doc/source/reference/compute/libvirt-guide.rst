@@ -186,7 +186,8 @@ With this option disabled Kolla Ansible will simply assume that certificates
 and keys are already installed in their correct locations. Deployers will be
 responsible for making sure that the TLS certificates/keys get placed in to the
 correct container configuration directories on the servers so that they can get
-copied into the nova-compute and nova-libvirt containers. With this option
+copied into the nova-compute, nova-libvirt and optionaly into the
+masakari-instancemonitor (if Masakari is enabled) containers. With this option
 disabled you will also be responsible for restarting the nova-compute and
 nova-libvirt containers when the certs are updated, as kolla-ansible will not
 be able to tell when the files have changed.

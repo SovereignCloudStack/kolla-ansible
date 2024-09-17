@@ -1,0 +1,12 @@
+---
+fixes:
+  - |
+    Fixes 2080671.
+    Masakari instancemonitor service failed when libvirt_tls was true
+    as it wasn't configured to communicate with local libvirt using
+    TLS.
+    `LP#2080671 <https://launchpad.net/bugs/2080671>`
+upgrade:
+  - |
+    Updates libvirt deployment reference to mention Masakari when externally
+    managed libvirt certificates are set up.

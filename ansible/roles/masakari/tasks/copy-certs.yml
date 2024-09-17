@@ -4,3 +4,29 @@
     role: service-cert-copy
   vars:
     project_services: "{{ masakari_services }}"
+  when:
+    - kolla_copy_ca_into_containers | bool
+
+- name: Copying over libvirt TLS keys to instancemonitor
+  become: true
+  vars:
+    key_files:
+      - cacert.pem
+      - clientcert.pem
+      - clientkey.pem
+    service_name: "masakari-instancemonitor"
+    service: "{{ masakari_services[service_name] }}"
+    paths:
+      - "{{ node_custom_config }}/nova/nova-libvirt/{{ inventory_hostname }}/{{ item }}"
+      - "{{ node_custom_config }}/nova/nova-libvirt/{{ item }}"
+  copy:
+    src: "{{ lookup('first_found', paths) }}"
+    dest: "{{ node_config_directory }}/{{ service_name }}/{{ item }}"
+    mode: "0600"
+  when:
+    - libvirt_tls | bool
+    - libvirt_tls_manage_certs | bool
+    - service | service_enabled_and_mapped_to_host
+  loop: "{{ key_files }}"
+  notify:
+    - Restart {{ service_name }} container

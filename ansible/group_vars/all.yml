@@ -956,6 +956,22 @@ kolla_verify_tls_backend: "yes"
 kolla_tls_backend_cert: "{{ kolla_certificates_dir }}/backend-cert.pem"
 kolla_tls_backend_key: "{{ kolla_certificates_dir }}/backend-key.pem"
 
+##################
+# libvirt options
+##################
+# Whether nova and masakari instancemonitor should communicate with libvirt
+# encrypted
+libvirt_tls: false
+# Wheter libvirt TLS certificates should be copied from control
+libvirt_tls_manage_certs: true
+# Whether to enable libvirt SASL authentication.
+libvirt_enable_sasl: true
+# Username for libvirt SASL.
+libvirt_sasl_authname: "nova"
+# List of enabled libvirt SASL authentication mechanisms.
+libvirt_sasl_mech_list:
+  - "{{ 'SCRAM-SHA-256' if libvirt_tls | bool else 'DIGEST-MD5' }}"
+
 #####################
 # ACME client options
 #####################
