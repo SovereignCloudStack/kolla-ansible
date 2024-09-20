@@ -1,30 +1,6 @@
 {
-    "command": "start-ovs-ipsec",
+    "command": ":",
     "config_files": [
-        {
-            "source": "{{ container_config_directory }}/start-ovs-ipsec",
-            "dest": "/usr/local/bin/start-ovs-ipsec",
-            "owner": "root",
-            "perm": "0655"
-        },
-        {
-            "source": "{{ container_config_directory }}/start-ipsec",
-            "dest": "/usr/local/bin/start-ipsec",
-            "owner": "root",
-            "perm": "0655"
-        },
-        {
-            "source": "{{ container_config_directory }}/ovn_ipsec_supervisor_event_handler.py",
-            "dest": "/usr/local/bin/ovn_ipsec_supervisor_event_handler.py",
-            "owner": "root",
-            "perm": "0655"
-        },
-        {
-            "source": "{{ container_config_directory }}/openvswitch-ipsec-supervisor.conf",
-            "dest": "/etc/supervisor/supervisord.conf",
-            "owner": "root",
-            "perm": "0644"
-        },
         {
             "source": "{{ container_config_directory }}/root.pem",
             "dest": "/etc/openvswitch/root.pem",
