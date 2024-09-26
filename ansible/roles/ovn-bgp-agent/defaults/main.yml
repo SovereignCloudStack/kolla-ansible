@@ -46,3 +46,9 @@ ovn_bgp_agent_default_volumes:
   - "/etc/iproute2/rt_tables:/etc/iproute2/rt_tables"
 
 ovn_bgp_agent_extra_volumes: "{{ default_extra_volumes }}"
+
+evpn_nic: "{{ bgp_loopback_interface }}"
+evpn_local_ip: "{{ bgp_loopback_ip }}"
+bgp_loopback_interface: "bgp-nic"
+bgp_expose_tenant_networks: "no"
+bgp_require_snat_disabled_for_tenant_networks: "no"

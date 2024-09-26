@@ -1,19 +1,31 @@
 [DEFAULT]
-debug=False
+debug=True
 log_file="/var/log/kolla/openvswitch/ovn-bgp-agent.log"
 watch_log_file=True
-
+expose_tenant_networks={{ bgp_expose_tenant_networks | bool }}
 ovsdb_connection="unix:/var/run/openvswitch/db.sock"
-
+require_snat_disabled_for_tenant_networks = {{ bgp_require_snat_disabled_for_tenant_networks | bool}}
 driver="{{ ovn_bgp_agent_driver }}"
 exposing_method="{{ ovn_bgp_agent_exposing_method }}"
-
+bgp_vrf_table_id=10
 bgp_AS="{{ bgp_local_asn }}"
 bgp_router_id="{{ bgp_loopback_ip }}"
-evpn_nic="{{ bgp_loopback_interface }}"
-evpn_local_ip="{{ bgp_loopback_ip }}"
+evpn_nic="{{ evpn_nic }}"
+evpn_local_ip="{{ evpn_local_ip }}"
 clear_vrf_routes_on_startup=True
+
+# use with routing.
+anycast_evpn_gateway_mode = True
+
 
 [ovn]
 ovn_nb_connection = "{{ ovn_nb_connection }}"
+
 ovn_sb_connection = "{{ ovn_sb_connection }}"
+
+
+[local_ovn_cluster]
+ovn_nb_connection = "{{ ovn_nb_connection }}"
+
+ovn_sb_connection = "{{ ovn_sb_connection }}"
+peer_ips = ""

@@ -1138,7 +1138,7 @@ neutron_enable_ovn_agent: "no"
 ####################
 ovn_bgp_agent_driver: "nb_ovn_bgp_driver"
 ovn_bgp_agent_exposing_method: "vrf"
-
+bgp_loopback_interface: "bgp-nic"
 #######################
 # Nova options
 #######################

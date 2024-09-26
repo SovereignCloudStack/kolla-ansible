@@ -44,3 +44,10 @@ frr_default_volumes:
   - "/var/run/:/var/run/"
 
 frr_extra_volumes: "{{ default_extra_volumes }}"
+
+frr_local_asn: "65001"
+frr_loopback_ip: "1.1.1.1"
+frr_neighbor_interface: "eth0"
+frr_neighbor_ip: "1.1.1.0"
+frr_neighbor_asn: "65001"
+frr_expose_network: "10.0.0.1/24"
