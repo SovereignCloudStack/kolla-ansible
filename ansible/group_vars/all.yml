@@ -480,7 +480,15 @@ mariadb_wsrep_port: "4567"
 mariadb_ist_port: "4568"
 mariadb_sst_port: "4444"
 mariadb_clustercheck_port: "4569"
+
 mariadb_monitor_user: "{{ 'monitor' if enable_proxysql | bool else 'haproxy' }}"
+mariadb_monitor_connect_interval: "2000"
+mariadb_monitor_galera_healthcheck_interval: "4000"
+mariadb_monitor_galera_healthcheck_timeout: "1000"
+mariadb_monitor_galera_healthcheck_max_timeout_count: "2"
+mariadb_monitor_ping_interval: "3000"
+mariadb_monitor_ping_timeout: "2000"
+mariadb_monitor_ping_max_failures: "2"
 
 mariadb_datadir_volume: "mariadb"
 
@@ -502,6 +510,7 @@ masakari_api_listen_port: "{{ masakari_api_port }}"
 masakari_coordination_backend: "{{ 'redis' if enable_redis | bool else 'etcd' if enable_etcd | bool else '' }}"
 
 memcached_port: "11211"
+memcache_security_strategy: "ENCRYPT"
 
 mistral_internal_fqdn: "{{ kolla_internal_fqdn }}"
 mistral_external_fqdn: "{{ kolla_external_fqdn }}"
@@ -583,6 +592,7 @@ prometheus_cadvisor_port: "18080"
 prometheus_fluentd_integration_port: "24231"
 prometheus_libvirt_exporter_port: "9177"
 prometheus_etcd_integration_port: "{{ etcd_client_port }}"
+proxysql_prometheus_exporter_port: "6070"
 
 # Prometheus alertmanager ports
 prometheus_alertmanager_internal_fqdn: "{{ kolla_internal_fqdn }}"
@@ -1241,6 +1251,7 @@ enable_prometheus_blackbox_exporter: "{{ enable_prometheus | bool }}"
 enable_prometheus_rabbitmq_exporter: "{{ enable_prometheus | bool and enable_rabbitmq | bool }}"
 enable_prometheus_libvirt_exporter: "{{ enable_prometheus | bool and enable_nova | bool and nova_compute_virt_type in ['kvm', 'qemu'] }}"
 enable_prometheus_etcd_integration: "{{ enable_prometheus | bool and enable_etcd | bool }}"
+enable_prometheus_proxysql_exporter: "{{ enable_prometheus | bool and enable_proxysql | bool }}"
 
 prometheus_alertmanager_user: "admin"
 prometheus_ceph_exporter_interval: "{{ prometheus_scrape_interval }}"
@@ -1270,13 +1281,6 @@ influxdb_internal_endpoint: "{{ kolla_internal_fqdn | kolla_url(internal_protoco
 #########################
 # Internal Image options
 #########################
-distro_python_version_map: {
-  "centos": "3.9",
-  "debian": "3.11",
-  "rocky": "3.9",
-  "ubuntu": "3.10"
-}
-
 kolla_base_distro_version_default_map: {
   "centos": "stream9",
   "debian": "bookworm",
@@ -1284,7 +1288,7 @@ kolla_base_distro_version_default_map: {
   "ubuntu": "jammy",
 }
 
-distro_python_version: "{{ distro_python_version_map[kolla_base_distro] }}"
+distro_python_version: "3"
 
 kolla_base_distro_version: "{{ kolla_base_distro_version_default_map[kolla_base_distro] }}"
 

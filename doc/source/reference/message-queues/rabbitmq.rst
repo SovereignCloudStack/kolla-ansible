@@ -128,7 +128,8 @@ additional steps needed to migrate from transient to durable queues.
 .. warning::
 
    Since the default changed from non-HA to Quorum queues in Bobcat release,
-   following procedure is required to be carried out before an upgrade.
+   following procedure is required to be carried out before a SLURP upgrade to
+   Caracal.
 
 1. Stop all OpenStack services which use RabbitMQ, so that they will not
    attempt to recreate any queues yet.
@@ -180,6 +181,9 @@ therefore RabbitMQ version 3.13).
 
    This command should be run from the Antelope release.
 
+   Note that this command is NOT idempotent. See "RabbitMQ versions" below for
+   an alternative approach.
+
 .. code-block:: console
 
    kolla-ansible rabbitmq-upgrade 3.12
@@ -196,7 +200,7 @@ you must override the image. if you want to use version 3.12 change
 
 .. code-block:: yaml
 
-   rabbitmq_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/rabbitmq-3.12"
+   rabbitmq_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/rabbitmq-3-12"
 
 You can then upgrade RabbitMQ with the usual command:
 

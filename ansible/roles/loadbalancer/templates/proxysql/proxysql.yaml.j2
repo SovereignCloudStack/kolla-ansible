@@ -10,15 +10,25 @@ errorlog: "/var/log/kolla/proxysql/proxysql.log"
 
 admin_variables:
    admin_credentials: "{{ proxysql_admin_user }}:{{ proxysql_admin_password }}"
-   mysql_ifaces: "{{ api_interface_address }}:{{ proxysql_admin_port }};{{ kolla_internal_vip_address }}:{{ proxysql_admin_port }};/var/lib/kolla/proxysql/admin.sock"
+   mysql_ifaces: "{{ api_interface_address | put_address_in_context('url') }}:{{ proxysql_admin_port }};{{ kolla_internal_vip_address | put_address_in_context('url') }}:{{ proxysql_admin_port }};/var/lib/kolla/proxysql/admin.sock"
    stats_credentials: "{{ proxysql_stats_user }}:{{ proxysql_stats_password }}"
+   restapi_enabled: "{{ enable_prometheus_proxysql_exporter | bool }}"
+   restapi_port: "{{ proxysql_prometheus_exporter_port }}"
+   prometheus_memory_metrics_interval: "{{ proxysql_prometheus_exporter_memory_metrics_interval }}"
 
 mysql_variables:
    threads: {{ proxysql_workers }}
    max_connections: {{ proxysql_max_connections }}
-   interfaces: "{{ kolla_internal_vip_address }}:{{ database_port }}"
+   interfaces: "{{ kolla_internal_vip_address | put_address_in_context('url') }}:{{ database_port }}"
    monitor_username: "{{ mariadb_monitor_user }}"
    monitor_password: "{{ mariadb_monitor_password }}"
+   monitor_connect_interval: "{{ mariadb_monitor_connect_interval }}"
+   monitor_galera_healthcheck_interval: "{{ mariadb_monitor_galera_healthcheck_interval }}"
+   monitor_galera_healthcheck_timeout: "{{ mariadb_monitor_galera_healthcheck_timeout }}"
+   monitor_galera_healthcheck_max_timeout_count: "{{ mariadb_monitor_galera_healthcheck_max_timeout_count }}"
+   monitor_ping_interval: "{{ mariadb_monitor_ping_interval }}"
+   monitor_ping_timeout: "{{ mariadb_monitor_ping_timeout }}"
+   monitor_ping_max_failures: "{{ mariadb_monitor_ping_max_failures }}"
 
 mysql_servers:
 {% for shard_id, shard in mariadb_shards_info.shards.items() %}
