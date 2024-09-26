@@ -14,6 +14,11 @@ evpn_nic="{{ bgp_loopback_interface }}"
 evpn_local_ip="{{ bgp_loopback_ip }}"
 clear_vrf_routes_on_startup=True
 
+# use with routing.
+anycast_evpn_gateway_mode = True
+
+
 [ovn]
 ovn_nb_connection = "{{ ovn_nb_connection }}"
+
 ovn_sb_connection = "{{ ovn_sb_connection }}"

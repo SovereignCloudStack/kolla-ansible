@@ -68,6 +68,7 @@
     - files:
         - "{{ node_custom_config }}/frr/{{ inventory_hostname }}/daemons"
         - "{{ node_custom_config }}/frr/daemons"
+        - "daemons.j2"
       skip: true
   when:
     - inventory_hostname in groups[service.group]
@@ -87,6 +88,7 @@
     - files:
         - "{{ node_custom_config }}/frr/{{ inventory_hostname }}/frr.conf"
         - "{{ node_custom_config }}/frr/frr.conf"
+        - "frr.conf.j2"
       skip: true
   when:
     - inventory_hostname in groups[service.group]
