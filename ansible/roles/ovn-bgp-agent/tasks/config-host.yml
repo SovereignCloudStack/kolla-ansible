@@ -39,3 +39,15 @@
         item.startswith('enp') or \
         item.startswith('enx') or \
         item.startswith('eth'))"
+
+- name: Ensure br-ex interface is up
+  become: true
+  shell: ip l set br-ex up
+  when: ovn_bgp_agent_exposing_method == 'underlay' and 'network' in group_names
+
+
+- name: Assign ip to br-ex
+  become: true
+  shell: ip a add {{ ovn_bgp_agent_loopback_ip_prefix }}.{{ groups['ovn-bgp-agent'].index(inventory_hostname) }}/32 dev br-ex
+  when: ovn_bgp_agent_exposing_method == 'underlay' and  'network' in group_names
+  ignore_errors: true
