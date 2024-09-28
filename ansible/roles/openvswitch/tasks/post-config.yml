@@ -17,10 +17,9 @@
     - { col: "external_ids", name: "system-id", value: "{{ openvswitch_system_id }}" }
     - { col: "external_ids", name: "hostname", value: "{{ openvswitch_hostname }}" }
     - { col: "other_config", name: "hw-offload", value: true, state: "{{ 'present' if openvswitch_hw_offload | bool else 'absent' }}" }
-  when:
-    - openvswitch_services['openvswitch-vswitchd'].host_in_groups | bool
-  notify:
-    - "Restart openvswitch-vswitchd container"
+    - { col: "other_config", name: "certificate", value: "/etc/openvswitch/cert.pem", state: "{{ 'present' if neutron_ovs_use_certificates | bool else 'absent' }}"}
+    - { col: "other_config", name: "private_key", value: "/etc/openvswitch/key.pem", state: "{{ 'present' if neutron_ovs_use_certificates | bool else 'absent' }}"}
+    - { col: "other_config", name: "ca_cert", value: "/etc/openvswitch/root.pem", state: "{{ 'present' if neutron_ovs_use_certificates | bool else 'absent' }}"}
 
 - name: Ensuring OVS bridge is properly setup
   become: true

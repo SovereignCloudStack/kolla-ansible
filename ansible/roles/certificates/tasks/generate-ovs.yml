@@ -1,0 +1,85 @@
+---
+- name: Ensuring private neutron ovs directory exist
+  file:
+    path: "{{ ovs_dir }}"
+    state: "directory"
+    mode: "0770"
+
+- name: Ensuring neutron ovs host directory exist
+  file:
+    path: "{{ kolla_certificates_dir }}/{{ item }}"
+    state: "directory"
+    mode: "0770"
+  loop: "{{ groups['neutron-ovn-agent'] }}"
+
+- name: Ensuring private neutron ovs host directory exist
+  file:
+    path: "{{ ovs_dir }}/{{ item }}"
+    state: "directory"
+    mode: "0770"
+  loop: "{{ groups['neutron-ovn-agent'] }}"
+
+- name: Creating neutron ovs SSL configuration files
+  template:
+    src: "openssl-kolla-ovs.cnf.j2"
+    dest: "{{ kolla_certificates_dir }}/{{ item }}/openssl-kolla-ovs.cnf"
+    mode: "0660"
+  loop: "{{ groups['neutron-ovn-agent'] }}"
+
+- name: Creating neutron ovs certificate keys
+  command: >
+    openssl genrsa
+    -out "{{ ovs_dir }}/{{ item }}/openvswitch.key" 2048
+  args:
+    creates: "{{ ovs_dir }}/{{ item }}/openvswitch.key"
+  loop: "{{ groups['neutron-ovn-agent'] }}"
+
+- name: Creating neutron ovs certificate signing requests
+  command: >
+    openssl req
+    -new
+    -key "{{ ovs_dir }}/{{ item }}/openvswitch.key"
+    -out "{{ ovs_dir }}/{{ item }}/openvswitch.csr"
+    -config "{{ kolla_certificates_dir }}/{{ item }}/openssl-kolla-ovs.cnf"
+    -sha256
+  args:
+    creates: "{{ ovs_dir }}/{{ item }}/openvswitch.csr"
+  loop: "{{ groups['neutron-ovn-agent'] }}"
+
+- name: Creating neutron ovs certificates
+  command: >
+    openssl x509
+    -req
+    -in "{{ ovs_dir }}/{{ item }}/openvswitch.csr"
+    -CA "{{ root_dir }}/root.crt"
+    -CAkey "{{ root_dir }}/root.key"
+    -CAcreateserial
+    -extensions v3_req
+    -extfile "{{ kolla_certificates_dir }}/{{ item }}/openssl-kolla-ovs.cnf"
+    -out "{{ ovs_dir }}/{{ item }}/openvswitch.crt"
+    -days 500
+    -sha256
+  args:
+    creates: "{{ ovs_dir }}/{{ item }}/openvswitch.crt"
+  loop: "{{ groups['neutron-ovn-agent'] }}"
+
+- name: Setting permissions on neutron ovs keys
+  file:
+    path: "{{ ovs_dir }}/{{ item }}/openvswitch.key"
+    mode: "0660"
+    state: file
+  loop: "{{ groups['neutron-ovn-agent'] }}"
+
+- name: Copy neutron ovs cert to default configuration location
+  copy:
+    src: "{{ ovs_dir }}/{{ item }}/openvswitch.crt"
+    dest: "{{ kolla_certificates_dir }}/{{ item }}/openvswitch-cert.pem"
+    mode: "0660"
+  loop: "{{ groups['neutron-ovn-agent'] }}"
+
+- name: Copy neutron ovs key to default configuration location
+  copy:
+    src: "{{ ovs_dir }}/{{ item }}/openvswitch.key"
+    dest: "{{ kolla_certificates_dir }}/{{ item }}/openvswitch-key.pem"
+    mode: "0660"
+  loop: "{{ groups['neutron-ovn-agent'] }}"
