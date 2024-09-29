@@ -1,7 +1,7 @@
 {
-    "command": "ovs_wrapper ovs-vswitchd unix:/run/openvswitch/db.sock -vconsole:emer -vsyslog:err -vfile:info --mlockall --log-file=/var/log/kolla/openvswitch/ovs-vswitchd.log --pidfile",
+    "command": "/bin/sh",
     "config_files": [
-        {% if neutron_ovs_use_certificates %}{
+        {
             "source": "{{ container_config_directory }}/root.pem",
             "dest": "/etc/openvswitch/root.pem",
             "owner": "root",
@@ -18,6 +18,6 @@
             "dest": "/etc/openvswitch/key.pem",
             "owner": "root",
             "perm": "0660"
-        }{% endif %}
+        }
     ]
 }

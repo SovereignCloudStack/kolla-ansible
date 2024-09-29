@@ -30,3 +30,59 @@
   when:
     - service | service_enabled_and_mapped_to_host
     - openvswitch_ovs_vsctl_wrapper_enabled | bool
+
+- name: Copying over certificate files for openvswitch-db-server
+  become: true
+  vars:
+    service: "{{ openvswitch_services['openvswitch-db-server'] }}"
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    mode: "0660"
+  when:
+    - service.host_in_groups | bool
+    - service.enabled | bool
+    - neutron_ovs_use_certificates | bool
+  loop:
+    - { src: "{{ kolla_certificates_dir }}/ca/root.crt", dest: "{{ node_config_directory }}/openvswitch-db-server/root.pem"}
+    - { src: "{{ kolla_certificates_dir }}/{{ inventory_hostname }}/openvswitch-cert.pem", dest: "{{ node_config_directory }}/openvswitch-db-server/cert.pem"}
+    - { src: "{{ kolla_certificates_dir }}/{{ inventory_hostname }}/openvswitch-key.pem", dest: "{{ node_config_directory }}/openvswitch-db-server/key.pem"}
+  notify:
+    - "Restart openvswitch-db-server container"
+
+- name: Copying over certificate files for openvswitch-vswitchd
+  become: true
+  vars:
+    service: "{{ openvswitch_services['openvswitch-vswitchd'] }}"
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    mode: "0660"
+  when:
+    - service.host_in_groups | bool
+    - service.enabled | bool
+    - neutron_ovs_use_certificates | bool
+  loop:
+    - { src: "{{ kolla_certificates_dir }}/ca/root.crt", dest: "{{ node_config_directory }}/openvswitch-vswitchd/root.pem"}
+    - { src: "{{ kolla_certificates_dir }}/{{ inventory_hostname }}/openvswitch-cert.pem", dest: "{{ node_config_directory }}/openvswitch-vswitchd/cert.pem"}
+    - { src: "{{ kolla_certificates_dir }}/{{ inventory_hostname }}/openvswitch-key.pem", dest: "{{ node_config_directory }}/openvswitch-vswitchd/key.pem"}
+  notify:
+    - "Restart openvswitch-db-server container"
+
+- name: Copying over certificate files for openvswitch-ipsec
+  become: true
+  vars:
+    service: "{{ openvswitch_services['openvswitch-ipsec'] }}"
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    mode: "0660"
+  when:
+    - service.host_in_groups | bool
+    - service.enabled | bool
+  loop:
+    - { src: "{{ kolla_certificates_dir }}/ca/root.crt", dest: "{{ node_config_directory }}/openvswitch-ipsec/root.pem"}
+    - { src: "{{ kolla_certificates_dir }}/{{ inventory_hostname }}/openvswitch-cert.pem", dest: "{{ node_config_directory }}/openvswitch-ipsec/cert.pem"}
+    - { src: "{{ kolla_certificates_dir }}/{{ inventory_hostname }}/openvswitch-key.pem", dest: "{{ node_config_directory }}/openvswitch-ipsec/key.pem"}
+  notify:
+    - "Restart openvswitch-ipsec container"

@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    Add openvswitch-ipsec service for IPsec encryption of tenant traffic when
+    using OVN Neutron plugin agent. Enabled with `enable_ovn_ipsec`.

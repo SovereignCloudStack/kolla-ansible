@@ -6,3 +6,5 @@
     - kolla_enable_tls_backend | bool or rabbitmq_enable_tls | bool
 - include_tasks: generate-libvirt.yml
   when: certificates_generate_libvirt | bool
+- include_tasks: generate-ovs.yml
+  when: neutron_ovs_generate_certificates | bool

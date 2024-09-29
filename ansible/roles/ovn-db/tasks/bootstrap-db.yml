@@ -22,6 +22,13 @@
   command: "{{ kolla_container_engine }} exec ovn_nb_db ovn-nbctl --inactivity-probe={{ ovn_nb_db_inactivity_probe }} set-connection ptcp:{{ ovn_nb_db_port }}:0.0.0.0"
   when: ovn_nb_cluster_status is search(search_string)
 
+- name: Configure OVN Ipsec
+  vars:
+    search_string: "Role: leader"
+  become: true
+  command: "{{ kolla_container_engine }} exec ovn_nb_db ovn-nbctl set nb_global . ipsec={{ 'true' if enable_ovn_ipsec else 'false' }}"
+  when: ovn_nb_cluster_status is search(search_string)
+
 - name: Get OVN_Southbound cluster leader
   become: true
   command: "{{ kolla_container_engine }} exec ovn_sb_db ovs-appctl -t /var/run/ovn/ovnsb_db.ctl cluster/status OVN_Southbound"
