@@ -1,0 +1,20 @@
+
+
+frr version 8.5.4
+frr defaults traditional
+log file /var/log/kolla/frr/frr.log debugging
+agentx
+fpm address 127.0.0.1
+no fpm use-next-hop-groups
+service integrated-vtysh-config
+
+router bgp {{ bgp_local_asn }}
+ bgp router-id {{ bgp_loopback_ip}}
+ bgp log-neighbor-changes
+ no bgp ebgp-requires-policy
+ neighbor {{ frr_neighbor_ip }} remote-as {{ frr_neighbor_asn }}
+ address-family ipv4 unicast
+  network {{ bgp_loopback_ip }}/32
+  network {{ frr_expose_network }}
+ exit-address-family
+exit
