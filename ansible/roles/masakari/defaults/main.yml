@@ -78,15 +78,15 @@ masakari_database_shard:
 ####################
 masakari_tag: "{{ openstack_tag }}"
 
-masakari_api_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/masakari-api"
+masakari_api_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/{{ docker_image_name_prefix }}masakari-api"
 masakari_api_tag: "{{ masakari_tag }}"
 masakari_api_image_full: "{{ masakari_api_image }}:{{ masakari_api_tag }}"
 
-masakari_engine_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/masakari-engine"
+masakari_engine_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/{{ docker_image_name_prefix }}masakari-engine"
 masakari_engine_tag: "{{ masakari_tag }}"
 masakari_engine_image_full: "{{ masakari_engine_image }}:{{ masakari_engine_tag }}"
 
-masakari_monitors_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/masakari-monitors"
+masakari_monitors_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/{{ docker_image_name_prefix }}masakari-monitors"
 masakari_monitors_tag: "{{ masakari_tag }}"
 masakari_monitors_image_full: "{{ masakari_monitors_image }}:{{ masakari_monitors_tag }}"
 
@@ -108,34 +108,31 @@ masakari_api_default_volumes:
   - "/etc/localtime:/etc/localtime:ro"
   - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "kolla_logs:/var/log/kolla/"
-  - "{{ kolla_dev_repos_directory ~ '/masakari/masakari:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/masakari' if masakari_dev_mode | bool else '' }}"
+  - "{{ kolla_dev_repos_directory ~ '/masakari:/dev-mode/masakari' if masakari_dev_mode | bool else '' }}"
 masakari_engine_default_volumes:
   - "{{ node_config_directory }}/masakari-engine/:{{ container_config_directory }}/:ro"
   - "/etc/localtime:/etc/localtime:ro"
   - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "kolla_logs:/var/log/kolla/"
-  - "{{ kolla_dev_repos_directory ~ '/masakari/masakari:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/masakari' if masakari_dev_mode | bool else '' }}"
+  - "{{ kolla_dev_repos_directory ~ '/masakari:/dev-mode/masakari' if masakari_dev_mode | bool else '' }}"
   - "masakari:/var/lib/masakari/"
 masakari_instancemonitor_default_volumes:
   - "{{ node_config_directory }}/masakari-instancemonitor/:{{ container_config_directory }}/:ro"
   - "/etc/localtime:/etc/localtime:ro"
   - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "kolla_logs:/var/log/kolla/"
-  - "{{ kolla_dev_repos_directory ~ '/masakari-monitors/masakarimonitors:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/masakarimonitors' if masakari_dev_mode | bool else '' }}"
+  - "{{ kolla_dev_repos_directory ~ '/masakari-monitors:/dev-mode/masakari-monitors' if masakari_dev_mode | bool else '' }}"
 masakari_hostmonitor_default_volumes:
   - "{{ node_config_directory }}/masakari-hostmonitor/:{{ container_config_directory }}/:ro"
   - "/etc/localtime:/etc/localtime:ro"
   - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "kolla_logs:/var/log/kolla/"
-  - "{{ kolla_dev_repos_directory ~ '/masakari-monitors/masakarimonitors:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/masakarimonitors' if masakari_dev_mode | bool else '' }}"
+  - "{{ kolla_dev_repos_directory ~ '/masakari-monitors:/dev-mode/masakari-monitors' if masakari_dev_mode | bool else '' }}"
 
 
 ####################
 # OpenStack
 ####################
-masakari_internal_endpoint: "{{ masakari_internal_fqdn | kolla_url(internal_protocol, masakari_api_port) }}"
-masakari_public_endpoint: "{{ masakari_external_fqdn | kolla_url(public_protocol, masakari_api_public_port) }}"
-
 masakari_logging_debug: "{{ openstack_logging_debug }}"
 
 masakari_keystone_user: "masakari"

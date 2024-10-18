@@ -2,36 +2,44 @@
 - job:
     name: kolla-ansible-variables
     vars:
-      previous_release: "2023.1"
-      container_engine: "docker"
-      scenario: core
-      virt_type: qemu
-      is_upgrade: no
+      address_family: 'ipv4'
+      # Test latest ansible-core version on Ubuntu, minimum supported on others.
+      # Use SLURP version (two releases back) on SLURP upgrades.
+      ansible_core_version_constraint: >-
+        {{ ansible_core_version_slurp if is_slurp else ansible_core_version_min if is_upgrade or ansible_facts.distribution != "Ubuntu" else ansible_core_version_max }}
+      ansible_core_version_slurp: "==2.16.*"
+      ansible_core_version_max: "==2.17.*"
+      ansible_core_version_min: "==2.16.*"
+      # Test latest ansible-core version on Ubuntu, minimum supported on others.
+      # Use SLURP version (two releases back) on SLURP upgrades.
+      # TODO(mnasiadka): Remove in D.
+      ansible_version_constraint: >-
+          {{ ansible_version_slurp if is_slurp else ansible_version_min if is_upgrade or ansible_facts.distribution != "Ubuntu" else ansible_version_max }}
+      ansible_version_slurp: "==9.*"
+      ansible_version_min: "==9.*"
+      ansible_version_max: "==10.*"
+      # NOTE(mgoddard): Test the use of interface names with dashes.
+      api_interface_name: "vxlan-0"
       api_network_prefix: "192.0.2."
       api_network_prefix_length: "24"
-      api_interface_name: vxlan0
+      configure_swap_size: 0
+      container_engine: "docker"
+      is_upgrade: false
+      is_slurp: false
       kolla_internal_vip_address: "192.0.2.10"
-      address_family: 'ipv4'
+      le_enabled: false
+      neutron_external_bridge_name: br-0
+      neutron_external_interface_name: "veth-{{ neutron_external_bridge_name }}-ext"
       neutron_external_network_prefix: "198.51.100."
       neutron_external_network_prefix_length: "24"
-      neutron_external_bridge_name: br0
-      neutron_external_interface_name: "veth-{{ neutron_external_bridge_name }}-ext"
-      neutron_external_vxlan_interface_name: vxlan1
+      neutron_external_vxlan_interface_name: "vxlan-1"
+      neutron_tenant_network_dns_server: "8.8.8.8"
       neutron_tenant_network_prefix: "203.0.113."
       neutron_tenant_network_prefix_length: "24"
-      neutron_tenant_network_dns_server: "8.8.8.8"
+      previous_release: "2024.1"
+      scenario: core
       tls_enabled: false
-      configure_swap_size: 0
-      ansible_core_version_min: "==2.14.*"
-      ansible_core_version_max: "==2.15.*"
-      # Test latest ansible version on Ubuntu, minimum supported on others.
-      ansible_core_version_constraint: >-
-        {{ ansible_core_version_min if is_upgrade or base_distro != 'ubuntu' else ansible_core_version_max }}
-      ansible_version_min: "==7.*"
-      ansible_version_max: "==8.*"
-      # Test latest ansible version on Ubuntu, minimum supported on others.
-      ansible_version_constraint: >-
-        {{ ansible_version_min if is_upgrade or base_distro != 'ubuntu' else ansible_version_max }}
+      virt_type: qemu
 
 - job:
     parent: kolla-ansible-variables
@@ -61,29 +69,6 @@
       - ^specs/
       - ^kolla_ansible/tests/
       - ^tools/validate-.*$
-      - ^zuul\.d/
-    vars:
-      previous_release: "2023.1"
-      container_engine: "docker"
-      scenario: core
-      virt_type: qemu
-      is_upgrade: no
-      api_network_prefix: "192.0.2."
-      api_network_prefix_length: "24"
-      api_interface_name: vxlan0
-      kolla_internal_vip_address: "192.0.2.10"
-      address_family: 'ipv4'
-      neutron_external_network_prefix: "198.51.100."
-      neutron_external_network_prefix_length: "24"
-      neutron_external_bridge_name: br0
-      neutron_external_interface_name: "veth-{{ neutron_external_bridge_name }}-ext"
-      neutron_external_vxlan_interface_name: vxlan1
-      neutron_tenant_network_prefix: "203.0.113."
-      neutron_tenant_network_prefix_length: "24"
-      neutron_tenant_network_dns_server: "8.8.8.8"
-      tls_enabled: false
-      le_enabled: false
-      configure_swap_size: 0
     roles:
       - zuul: zuul/zuul-jobs
       - zuul: openstack/kolla
@@ -95,6 +80,7 @@
     files:
       - ^requirements-core.yml
       - ^ansible/roles/(nova-cell)/
+      - ^tests/templates/(inventory|globals-default.j2)
       - ^tests/templates/nova-compute-overrides.j2
     vars:
       virt_type: kvm
@@ -121,6 +107,7 @@
     files:
       - ^requirements-core.yml
       - ^ansible/roles/bifrost/
+      - ^tests/templates/(inventory|globals-default.j2)
       - ^tests/test-bifrost.sh
     vars:
       scenario: bifrost
@@ -133,6 +120,7 @@
       - ^requirements-core.yml
       - ^ansible/roles/(ironic|neutron|nova|nova-cell)/
       - ^tests/deploy-tenks\.sh$
+      - ^tests/templates/(inventory|globals-default.j2)
       - ^tests/templates/ironic-overrides\.j2$
       - ^tests/templates/tenks-deploy-config\.yml\.j2$
       - ^tests/test-dashboard\.sh$
@@ -150,10 +138,10 @@
       - ^requirements-core.yml
       - ^ansible/roles/(zun|kuryr|etcd|cinder|iscsi)/
       - ^tests/setup_disks.sh
+      - ^tests/templates/(inventory|globals-default.j2)
       - ^tests/test-core-openstack.sh
       - ^tests/test-zun.sh
       - ^tests/test-dashboard.sh
-      - ^tests/templates/globals-default\.j2$
     vars:
       scenario: zun
 
@@ -166,6 +154,7 @@
       - ^ansible/roles/(glance|swift)/
       - ^tests/setup_disks.sh
       - ^tests/init-swift.sh
+      - ^tests/templates/(inventory|globals-default.j2)
       - ^tests/test-core-openstack.sh
       - ^tests/test-dashboard.sh
       - ^tests/test-swift.sh
@@ -186,6 +175,7 @@
     files:
       - ^requirements-core.yml
       - ^ansible/roles/(designate|magnum|trove)/
+      - ^tests/templates/(inventory|globals-default.j2)
       - ^tests/test-dashboard.sh
       - ^tests/test-magnum.sh
     vars:
@@ -198,6 +188,7 @@
     files:
       - ^requirements-core.yml
       - ^ansible/roles/(octavia|octavia-certificates)/
+      - ^tests/templates/(inventory|globals-default.j2)
       - ^tests/test-dashboard.sh
       - ^tests/test-octavia.sh
     vars:
@@ -211,6 +202,7 @@
       - ^requirements-core.yml
       - ^ansible/roles/masakari/
       - ^ansible/roles/hacluster/
+      - ^tests/templates/(inventory|globals-default.j2)
       - ^tests/test-masakari.sh
       - ^tests/test-dashboard.sh
     vars:
@@ -219,10 +211,11 @@
 - job:
     name: kolla-ansible-mariadb-base
     parent: kolla-ansible-base
-    voting: false
+    voting: true
     files:
       - ^requirements-core.yml
       - ^ansible/roles/mariadb/
+      - ^tests/templates/(inventory|globals-default.j2)
       - ^tests/test-mariadb.sh
     vars:
       scenario: mariadb
@@ -234,6 +227,7 @@
     files:
       - ^requirements-core.yml
       - ^ansible/roles/(aodh|barbican|heat|mistral|redis|tacker)/
+      - ^tests/templates/(inventory|globals-default.j2)
       - ^tests/test-scenario-nfv.sh
       - ^tests/test-dashboard.sh
     vars:
@@ -246,6 +240,7 @@
     files:
       - ^requirements-core.yml
       - ^ansible/roles/nova/
+      - ^tests/templates/(inventory|globals-default.j2)
       - ^tests/test-core-openstack.sh
     vars:
       scenario: cells
@@ -257,8 +252,10 @@
     files:
       - ^requirements-core.yml
       - ^ansible/roles/(neutron|octavia|openvswitch|ovn-controller|ovn-db)/
+      - ^tests/templates/(inventory|globals-default.j2)
       - ^tests/test-ovn.sh
       - ^tests/test-core-openstack.sh
+      - ^tests/reconfigure.sh
     vars:
       scenario: ovn
 
@@ -269,6 +266,7 @@
     files:
       - ^requirements-core.yml
       - ^ansible/roles/(common|opensearch|grafana|prometheus)/
+      - ^tests/templates/(inventory|globals-default.j2)
       - ^tests/test-prometheus-opensearch.sh
     vars:
       scenario: prometheus-opensearch
@@ -280,6 +278,7 @@
     files:
       - ^requirements-core.yml
       - ^ansible/roles/(common|opensearch|venus)/
+      - ^tests/templates/(inventory|globals-default.j2)
       - ^tests/test-venus.sh
     vars:
       scenario: venus
@@ -296,7 +295,23 @@
       - ^requirements-core.yml
       - ^kolla_ansible/
       - ^tests/run-hashi-vault.yml
+      - ^tests/templates/(inventory|globals-default.j2)
       - ^tests/test-hashicorp-vault-passwords.sh
+
+- job:
+    name: kolla-ansible-haproxy-base
+    parent: kolla-ansible-base
+    voting: false
+    files:
+      - ^ansible/roles/haproxy/
+      - ^kolla_ansible/kolla_url.py
+      - ^tests/templates/(inventory|globals-default.j2)
+    vars:
+      external_api_interface_name: vxlan2
+      external_api_network_prefix: "192.0.3."
+      external_api_network_prefix_length: "24"
+      kolla_external_vip_address: "192.0.3.10"
+      scenario: haproxy
 
 - job:
     name: kolla-ansible-lets-encrypt-base
@@ -304,8 +319,9 @@
     voting: false
     files:
       - ^requirements-core.yml
-      - ^ansible/roles/letsencrypt/
-      - ^ansible/roles/loadbalancer/
+      - ^ansible/roles/common/templates/conf/input/11-letsencrypt.conf.j2
+      - ^ansible/roles/(letsencrypt|loadbalancer)/
+      - ^tests/templates/(inventory|globals-default.j2)
       - ^tests/test-core-openstack.sh
       - ^tests/test-dashboard.sh
       - ^tests/deploy.sh
@@ -321,6 +337,19 @@
     files:
       - ^requirements-core.yml
       - ^ansible/roles/skyline/
+      - ^tests/templates/(inventory|globals-default.j2)
       - ^tests/test-skyline.sh
     vars:
       scenario: skyline
+
+- job:
+    name: kolla-ansible-skyline-sso-base
+    parent: kolla-ansible-base
+    voting: false
+    files:
+      - ^requirements-core.yml
+      - ^ansible/roles/skyline/
+      - ^tests/templates/(inventory|globals-default.j2)
+      - ^tests/test-skyline-sso.sh
+    vars:
+      scenario: skyline-sso

@@ -42,6 +42,13 @@ scrape_configs:
           instance: "{{ hostvars[host].prometheus_instance_label }}"
 {% endif %}
 {% endfor %}
+{% for target in prometheus_node_exporter_targets_extra %}
+      - targets:
+        - '{{ target.target }}'
+{% if target.labels | default({}, true) %}
+        labels: {{ target.labels | to_json }}
+{% endif %}
+{% endfor %}
 {% endif %}
 
 {% if enable_prometheus_mysqld_exporter | bool %}
@@ -60,9 +67,9 @@ scrape_configs:
 {% if enable_prometheus_haproxy_exporter | bool %}
   - job_name: haproxy
     static_configs:
-{% for host in groups['prometheus-haproxy-exporter'] %}
+{% for host in groups['loadbalancer'] %}
       - targets:
-        - '{{ 'api' | kolla_address(host) | put_address_in_context('url') }}:{{ hostvars[host]['prometheus_haproxy_exporter_port'] }}'
+        - '{{ 'api' | kolla_address(host) | put_address_in_context('url') }}:{{ prometheus_haproxy_exporter_port }}'
 {% if hostvars[host].prometheus_instance_label | default(false, true) %}
         labels:
           instance: "{{ hostvars[host].prometheus_instance_label }}"
@@ -125,6 +132,7 @@ scrape_configs:
 {% if enable_prometheus_ceph_mgr_exporter | bool %}
   - job_name: ceph_mgr_exporter
     honor_labels: true
+    scrape_interval: {{ prometheus_ceph_exporter_interval }}
     static_configs:
       - targets:
 {% for exporter in prometheus_ceph_mgr_exporter_endpoints %}
@@ -225,6 +233,10 @@ scrape_configs:
     static_configs:
 {% for host in groups['ironic-conductor'] %}
       - targets: ["{{ 'api' | kolla_address(host) | put_address_in_context('url') }}:{{ hostvars[host]['ironic_prometheus_exporter_port'] }}"]
+{% if hostvars[host].prometheus_instance_label | default(false, true) %}
+        labels:
+          instance: "{{ hostvars[host].prometheus_instance_label }}"
+{% endif %}
 {% endfor %}
 {% endif %}
 
@@ -240,11 +252,28 @@ scrape_configs:
 {% endif %}
 {% endfor %}
 
+{% if enable_prometheus_proxysql_exporter | bool %}
+  - job_name: proxysql
+    static_configs:
+{% for host in groups["loadbalancer"] %}
+      - targets:
+        - '{{ 'api' | kolla_address(host) | put_address_in_context('url') }}:{{ hostvars[host]['proxysql_prometheus_exporter_port'] }}'
+{% if hostvars[host].prometheus_instance_label | default(false, true) %}
+        labels:
+          instance: "{{ hostvars[host].prometheus_instance_label }}"
+{% endif %}
+{% endfor %}
+{% endif %}
+
 alerting:
   alertmanagers:
-  - static_configs:
-    - targets:
+    - static_configs:
 {% for host in groups["prometheus-alertmanager"] %}
+      - targets:
         - '{{ 'api' | kolla_address(host) | put_address_in_context('url') }}:{{ hostvars[host]['prometheus_alertmanager_port'] }}'
+{% if hostvars[host].prometheus_instance_label | default(false, true) %}
+        labels:
+          instance: "{{ hostvars[host].prometheus_instance_label }}"
+{% endif %}
 {% endfor %}
 {% endif %}

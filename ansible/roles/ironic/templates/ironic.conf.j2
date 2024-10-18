@@ -18,6 +18,8 @@ my_ip = {{ api_interface_address }}
 notification_level = info
 {% endif %}
 
+rbac_service_role_elevated_access = True
+
 [oslo_messaging_notifications]
 transport_url = {{ notify_transport_url }}
 {% if ironic_enabled_notification_topics or enable_ironic_prometheus_exporter | bool %}
@@ -43,6 +45,9 @@ ssl_ca_file = {{ om_rabbitmq_cacert }}
 {% endif %}
 {% if om_enable_rabbitmq_high_availability | bool %}
 amqp_durable_queues = true
+{% endif %}
+{% if om_enable_rabbitmq_quorum_queues | bool %}
+rabbit_quorum_queue = true
 {% endif %}
 
 {% if ironic_policy_file is defined %}
@@ -81,7 +86,7 @@ region_name = {{ openstack_region_name }}
 valid_interfaces = internal
 cafile = {{ openstack_cacert }}
 
-memcache_security_strategy = ENCRYPT
+memcache_security_strategy = {{ memcache_security_strategy }}
 memcache_secret_key = {{ memcache_secret_key }}
 memcached_servers = {% for host in groups['memcached'] %}{{ 'api' | kolla_address(host) | put_address_in_context('memcache') }}:{{ memcached_port }}{% if not loop.last %},{% endif %}{% endfor %}
 {% endif %}

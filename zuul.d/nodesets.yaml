@@ -6,22 +6,10 @@
         label: centos-9-stream
 
 - nodeset:
-    name: kolla-ansible-debian-bullseye
-    nodes:
-      - name: primary
-        label: debian-bullseye
-
-- nodeset:
     name: kolla-ansible-debian-bookworm
     nodes:
       - name: primary
         label: debian-bookworm
-
-- nodeset:
-    name: kolla-ansible-debian-bullseye-aarch64
-    nodes:
-      - name: primary
-        label: debian-bullseye-arm64
 
 - nodeset:
     name: kolla-ansible-debian-bookworm-aarch64
@@ -30,10 +18,10 @@
         label: debian-bookworm-arm64
 
 - nodeset:
-    name: kolla-ansible-jammy
+    name: kolla-ansible-noble
     nodes:
       - name: primary
-        label: ubuntu-jammy
+        label: ubuntu-noble
 
 - nodeset:
     name: kolla-ansible-debian-bookworm-multi
@@ -46,26 +34,20 @@
         label: debian-bookworm
 
 - nodeset:
-    name: kolla-ansible-openeuler-22.03-lts
-    nodes:
-      - name: primary
-        label: openEuler-22-03-LTS
-
-- nodeset:
     name: kolla-ansible-rocky9
     nodes:
       - name: primary
         label: rockylinux-9
 
 - nodeset:
-    name: kolla-ansible-jammy-multi
+    name: kolla-ansible-noble-multi
     nodes:
       - name: primary
-        label: ubuntu-jammy
+        label: ubuntu-noble
       - name: secondary1
-        label: ubuntu-jammy
+        label: ubuntu-noble
       - name: secondary2
-        label: ubuntu-jammy
+        label: ubuntu-noble
 
 - nodeset:
     name: kolla-ansible-rocky9-multi
@@ -78,10 +60,10 @@
         label: rockylinux-9
 
 - nodeset:
-    name: kolla-ansible-jammy-nested-virt
+    name: kolla-ansible-noble-nested-virt
     nodes:
       - name: primary
-        label: nested-virt-ubuntu-jammy
+        label: nested-virt-ubuntu-noble
 
 - nodeset:
     name: kolla-ansible-rocky9-nested-virt
@@ -90,16 +72,16 @@
         label: nested-virt-centos-9-stream
 
 - nodeset:
-    name: kolla-ansible-jammy-masakari
+    name: kolla-ansible-noble-masakari
     nodes:
       - name: primary
-        label: ubuntu-jammy
+        label: ubuntu-noble
       - name: secondary
-        label: ubuntu-jammy
+        label: ubuntu-noble
       - name: ternary1
-        label: ubuntu-jammy
+        label: ubuntu-noble
       - name: ternary2
-        label: ubuntu-jammy
+        label: ubuntu-noble
 
 - nodeset:
     name: kolla-ansible-rocky9-masakari

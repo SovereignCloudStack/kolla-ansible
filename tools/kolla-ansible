@@ -7,8 +7,8 @@ set -o errexit
 # do not use _PYTHON_BIN directly, use $(get_python_bin) instead
 _PYTHON_BIN=""
 
-ANSIBLE_VERSION_MIN=2.14
-ANSIBLE_VERSION_MAX=2.15
+ANSIBLE_VERSION_MIN=2.16
+ANSIBLE_VERSION_MAX=2.17
 
 function get_python_bin {
     if [ -n "$_PYTHON_BIN" ]; then
@@ -199,6 +199,7 @@ Commands:
     post-deploy          Do post deploy on deploy node
     pull                 Pull all images for containers (only pulls, no running container changes)
     rabbitmq-reset-state Force reset the state of RabbitMQ
+    rabbitmq-upgrade <version> Upgrade to a specific version of RabbitMQ
     reconfigure          Reconfigure OpenStack service
     stop                 Stop Kolla containers
     certificates         Generate self-signed certificate for TLS *For Development Only*
@@ -247,6 +248,7 @@ gather-facts
 post-deploy
 pull
 rabbitmq-reset-state
+rabbitmq-upgrade
 reconfigure
 stop
 certificates
@@ -456,12 +458,20 @@ case "$1" in
 (destroy)
         ACTION="Destroy Kolla containers, volumes and host configuration"
         PLAYBOOK="${BASEDIR}/ansible/destroy.yml"
+
+        INVENTORIES_COMMA_SEPARATED=""
+        for INVENTORY in ${INVENTORIES[@]}; do
+            INVENTORIES_COMMA_SEPARATED="${INVENTORIES_COMMA_SEPARATED},${INVENTORY}"
+        done
+        INVENTORIES_COMMA_SEPARATED=$(echo "${INVENTORIES_COMMA_SEPARATED}" | sed -e 's/^,//g')
+
         if [[ "${INCLUDE_IMAGES}" == "--include-images" ]]; then
             EXTRA_OPTS="$EXTRA_OPTS -e destroy_include_images=yes"
         fi
         if [[ "${INCLUDE_DEV}" == "--include-dev" ]]; then
             EXTRA_OPTS="$EXTRA_OPTS -e destroy_include_dev=yes"
         fi
+        EXTRA_OPTS="$EXTRA_OPTS -e inventories_comma_separated=${INVENTORIES_COMMA_SEPARATED}"
         if [[ "${DANGER_CONFIRM}" != "--yes-i-really-really-mean-it" ]]; then
             cat << EOF
 WARNING:
@@ -571,6 +581,12 @@ EOF
 (rabbitmq-reset-state)
         ACTION="Force reset the state of RabbitMQ"
         PLAYBOOK="${BASEDIR}/ansible/rabbitmq-reset-state.yml"
+        ;;
+(rabbitmq-upgrade)
+        RMQ_VERSION="$2"
+        ACTION="Upgrade to a specific version of RabbitMQ"
+        PLAYBOOK="${BASEDIR}/ansible/rabbitmq-upgrade.yml"
+        EXTRA_OPTS="$EXTRA_OPTS -e rabbitmq_version_suffix=${RMQ_VERSION}"
         ;;
 (bash-completion)
         bash_completion

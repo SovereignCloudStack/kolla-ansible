@@ -64,11 +64,9 @@
   when:
     - (enable_ceph | default()) | bool
 
-- name: Validate that enable_zun is disabled
+- name: Validate rabbitmq variables
   run_once: True
   fail:
     msg: |
-      Apologies, Zun is currently not supported for this release.
-      Please consult the release notes.
-  when:
-    - (enable_zun | default()) | bool
+      Please set only one of om_enable_rabbitmq_high_availability or om_enable_rabbitmq_quorum_queues
+  when: (om_enable_rabbitmq_high_availability | bool) == (om_enable_rabbitmq_quorum_queues | bool)

@@ -16,7 +16,7 @@ allow_resize_to_same_host = true
 # Though my_ip is not used directly, lots of other variables use $my_ip
 my_ip = {{ api_interface_address }}
 
-{% if enable_ceilometer | bool or enable_designate | bool %}
+{% if enable_ceilometer | bool %}
 instance_usage_audit = True
 instance_usage_audit_period = hour
 {% endif %}
@@ -122,7 +122,7 @@ password = {{ nova_keystone_password }}
 cafile = {{ openstack_cacert }}
 region_name = {{ openstack_region_name }}
 
-memcache_security_strategy = ENCRYPT
+memcache_security_strategy = {{ memcache_security_strategy }}
 memcache_secret_key = {{ memcache_secret_key }}
 memcached_servers = {% for host in groups['memcached'] %}{{ 'api' | kolla_address(host) | put_address_in_context('memcache') }}:{{ memcached_port }}{% if not loop.last %},{% endif %}{% endfor %}
 
@@ -146,6 +146,9 @@ ssl_ca_file = {{ om_rabbitmq_cacert }}
 {% endif %}
 {% if om_enable_rabbitmq_high_availability | bool %}
 amqp_durable_queues = true
+{% endif %}
+{% if om_enable_rabbitmq_quorum_queues | bool %}
+rabbit_quorum_queue = true
 {% endif %}
 
 {% if service_name in nova_services_require_policy_json and nova_policy_file is defined %}

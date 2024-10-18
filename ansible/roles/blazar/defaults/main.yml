@@ -70,11 +70,11 @@ blazar_database_shard:
 ####################
 blazar_tag: "{{ openstack_tag }}"
 
-blazar_manager_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/blazar-manager"
+blazar_manager_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/{{ docker_image_name_prefix }}blazar-manager"
 blazar_manager_tag: "{{ blazar_tag }}"
 blazar_manager_image_full: "{{ blazar_manager_image }}:{{ blazar_manager_tag }}"
 
-blazar_api_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/blazar-api"
+blazar_api_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/{{ docker_image_name_prefix }}blazar-api"
 blazar_api_tag: "{{ blazar_tag }}"
 blazar_api_image_full: "{{ blazar_api_image }}:{{ blazar_api_tag }}"
 
@@ -114,13 +114,13 @@ blazar_api_default_volumes:
   - "/etc/localtime:/etc/localtime:ro"
   - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "kolla_logs:/var/log/kolla/"
-  - "{{ kolla_dev_repos_directory ~ '/blazar/blazar:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/blazar' if blazar_dev_mode | bool else '' }}"
+  - "{{ kolla_dev_repos_directory ~ '/blazar:/dev-mode/blazar' if blazar_dev_mode | bool else '' }}"
 blazar_manager_default_volumes:
   - "{{ node_config_directory }}/blazar-manager/:{{ container_config_directory }}/:ro"
   - "/etc/localtime:/etc/localtime:ro"
   - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "kolla_logs:/var/log/kolla/"
-  - "{{ kolla_dev_repos_directory ~ '/blazar/blazar:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/blazar' if blazar_dev_mode | bool else '' }}"
+  - "{{ kolla_dev_repos_directory ~ '/blazar:/dev-mode/blazar' if blazar_dev_mode | bool else '' }}"
 
 blazar_extra_volumes: "{{ default_extra_volumes }}"
 blazar_api_extra_volumes: "{{ blazar_extra_volumes }}"
@@ -129,8 +129,8 @@ blazar_manager_extra_volumes: "{{ blazar_extra_volumes }}"
 ####################
 # OpenStack
 ####################
-blazar_internal_endpoint: "{{ blazar_internal_fqdn | kolla_url(internal_protocol, blazar_api_port, '/v1') }}"
-blazar_public_endpoint: "{{ blazar_external_fqdn | kolla_url(public_protocol, blazar_api_public_port, '/v1') }}"
+blazar_internal_endpoint: "{{ blazar_internal_base_endpoint }}/v1"
+blazar_public_endpoint: "{{ blazar_public_base_endpoint }}/v1"
 
 blazar_logging_debug: "{{ openstack_logging_debug }}"
 

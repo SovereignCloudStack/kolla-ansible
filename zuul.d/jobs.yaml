@@ -14,6 +14,7 @@
     parent: kolla-ansible-debian
     nodeset: kolla-ansible-debian-bookworm-aarch64
     timeout: 10800
+    voting: false
     required-projects:
       - openstack/kolla
 
@@ -22,6 +23,7 @@
     parent: kolla-ansible-debian
     nodeset: kolla-ansible-debian-bookworm-aarch64
     timeout: 10800
+    voting: false
     vars:
       container_engine: podman
     required-projects:
@@ -45,15 +47,6 @@
       container_engine: podman
 
 - job:
-    name: kolla-ansible-openeuler
-    parent: kolla-ansible-base
-    nodeset: kolla-ansible-openeuler-22.03-lts
-    voting: false
-    vars:
-      base_distro: ubuntu
-      tls_enabled: true
-
-- job:
     name: kolla-ansible-rocky9
     parent: kolla-ansible-base
     nodeset: kolla-ansible-rocky9
@@ -73,7 +66,7 @@
 - job:
     name: kolla-ansible-ubuntu
     parent: kolla-ansible-base
-    nodeset: kolla-ansible-jammy
+    nodeset: kolla-ansible-noble
     vars:
       base_distro: ubuntu
       tls_enabled: true
@@ -81,7 +74,7 @@
 - job:
     name: kolla-ansible-ubuntu-podman
     parent: kolla-ansible-base
-    nodeset: kolla-ansible-jammy
+    nodeset: kolla-ansible-noble
     vars:
       base_distro: ubuntu
       tls_enabled: true
@@ -97,7 +90,7 @@
 - job:
     name: kolla-ansible-ubuntu-kvm
     parent: kolla-ansible-kvm-base
-    nodeset: kolla-ansible-jammy-nested-virt
+    nodeset: kolla-ansible-noble-nested-virt
     vars:
       base_distro: ubuntu
 
@@ -111,7 +104,7 @@
 - job:
     name: kolla-ansible-ubuntu-multinode-ipv6
     parent: kolla-ansible-ipv6-base
-    nodeset: kolla-ansible-jammy-multi
+    nodeset: kolla-ansible-noble-multi
     vars:
       base_distro: ubuntu
 
@@ -127,11 +120,18 @@
 - job:
     name: kolla-ansible-ubuntu-cephadm
     parent: kolla-ansible-cephadm-base
-    nodeset: kolla-ansible-jammy-multi
+    nodeset: kolla-ansible-noble-multi
     timeout: 10800
     vars:
       base_distro: ubuntu
       cephadm_use_package_from_distribution: true
+
+- job:
+    name: kolla-ansible-debian-mariadb
+    parent: kolla-ansible-mariadb-base
+    nodeset: kolla-ansible-debian-bookworm-multi
+    vars:
+      base_distro: debian
 
 - job:
     name: kolla-ansible-rocky9-mariadb
@@ -143,7 +143,7 @@
 - job:
     name: kolla-ansible-ubuntu-mariadb
     parent: kolla-ansible-mariadb-base
-    nodeset: kolla-ansible-jammy-multi
+    nodeset: kolla-ansible-noble-multi
     vars:
       base_distro: ubuntu
 
@@ -158,9 +158,22 @@
       tls_enabled: true
 
 - job:
+    name: kolla-ansible-rocky9-slurp-upgrade
+    parent: kolla-ansible-base
+    nodeset: kolla-ansible-rocky9
+    timeout: 9000
+    branches: master
+    vars:
+      base_distro: rocky
+      is_upgrade: yes
+      is_slurp: yes
+      previous_release: 2023.1
+      tls_enabled: true
+
+- job:
     name: kolla-ansible-debian-upgrade
     parent: kolla-ansible-base
-    nodeset: kolla-ansible-debian-bullseye
+    nodeset: kolla-ansible-debian-bookworm
     timeout: 10800
     vars:
       base_distro: debian
@@ -168,9 +181,23 @@
       tls_enabled: true
 
 - job:
+    name: kolla-ansible-debian-slurp-upgrade
+    parent: kolla-ansible-base
+    nodeset: kolla-ansible-debian-bookworm
+    timeout: 9000
+    branches: master
+    vars:
+      base_distro: debian
+      is_upgrade: yes
+      is_slurp: yes
+      previous_release: 2023.1
+      tls_enabled: true
+
+- job:
     name: kolla-ansible-debian-upgrade-aarch64
     parent: kolla-ansible-debian-upgrade
-    nodeset: kolla-ansible-debian-bullseye-aarch64
+    nodeset: kolla-ansible-debian-bookworm-aarch64
+    voting: false
 
 - job:
     name: kolla-ansible-ubuntu-upgrade
@@ -183,6 +210,19 @@
       tls_enabled: true
 
 - job:
+    name: kolla-ansible-ubuntu-slurp-upgrade
+    parent: kolla-ansible-base
+    nodeset: kolla-ansible-noble
+    timeout: 9000
+    branches: master
+    vars:
+      base_distro: ubuntu
+      is_upgrade: yes
+      is_slurp: yes
+      previous_release: 2023.1
+      tls_enabled: true
+
+- job:
     name: kolla-ansible-rocky9-upgrade-cephadm
     parent: kolla-ansible-cephadm-base
     nodeset: kolla-ansible-rocky9-multi
@@ -192,6 +232,18 @@
       is_upgrade: yes
 
 - job:
+    name: kolla-ansible-rocky9-slurp-upgrade-cephadm
+    parent: kolla-ansible-cephadm-base
+    nodeset: kolla-ansible-rocky9-multi
+    timeout: 9000
+    branches: master
+    vars:
+      base_distro: rocky
+      is_upgrade: yes
+      is_slurp: yes
+      previous_release: 2023.1
+
+- job:
     name: kolla-ansible-ubuntu-upgrade-cephadm
     parent: kolla-ansible-cephadm-base
     nodeset: kolla-ansible-jammy-multi
@@ -199,6 +251,19 @@
     vars:
       base_distro: ubuntu
       is_upgrade: yes
+      cephadm_use_package_from_distribution: true
+
+- job:
+    name: kolla-ansible-ubuntu-slurp-upgrade-cephadm
+    parent: kolla-ansible-cephadm-base
+    nodeset: kolla-ansible-noble-multi
+    timeout: 9000
+    branches: master
+    vars:
+      base_distro: ubuntu
+      is_upgrade: yes
+      is_slurp: yes
+      previous_release: 2023.1
       cephadm_use_package_from_distribution: true
 
 - job:
@@ -238,7 +303,7 @@
 - job:
     name: kolla-ansible-ubuntu-bifrost
     parent: kolla-ansible-bifrost-base
-    nodeset: kolla-ansible-jammy
+    nodeset: kolla-ansible-noble
     vars:
       base_distro: ubuntu
 
@@ -252,7 +317,7 @@
 - job:
     name: kolla-ansible-ubuntu-zun
     parent: kolla-ansible-zun-base
-    nodeset: kolla-ansible-jammy-multi
+    nodeset: kolla-ansible-noble-multi
     vars:
       base_distro: ubuntu
 
@@ -269,12 +334,12 @@
 - job:
     name: kolla-ansible-ubuntu-swift
     parent: kolla-ansible-swift-base
-    nodeset: kolla-ansible-jammy-multi
+    nodeset: kolla-ansible-noble-multi
     vars:
       base_distro: ubuntu
       # NOTE(yoctozepto): We need this here because we initialise Swift outside
       # of Kolla Ansible and need to know the version of images.
-      base_distro_version: jammy
+      base_distro_version: noble
 
 - job:
     name: kolla-ansible-rocky9-swift-upgrade
@@ -291,13 +356,13 @@
 - job:
     name: kolla-ansible-ubuntu-swift-upgrade
     parent: kolla-ansible-swift-base
-    nodeset: kolla-ansible-jammy-multi
+    nodeset: kolla-ansible-noble-multi
     timeout: 10800
     vars:
       base_distro: ubuntu
       # NOTE(yoctozepto): We need this here because we initialise Swift outside
       # of Kolla Ansible and need to know the version of images.
-      base_distro_version: jammy
+      base_distro_version: noble
       is_upgrade: yes
 
 - job:
@@ -324,7 +389,7 @@
 - job:
     name: kolla-ansible-ubuntu-ironic
     parent: kolla-ansible-ironic-base
-    nodeset: kolla-ansible-jammy
+    nodeset: kolla-ansible-noble
     vars:
       base_distro: ubuntu
 
@@ -338,7 +403,7 @@
 - job:
     name: kolla-ansible-ubuntu-magnum
     parent: kolla-ansible-magnum-base
-    nodeset: kolla-ansible-jammy
+    nodeset: kolla-ansible-noble
     vars:
       base_distro: ubuntu
 
@@ -352,14 +417,14 @@
 - job:
     name: kolla-ansible-ubuntu-octavia
     parent: kolla-ansible-octavia-base
-    nodeset: kolla-ansible-jammy
+    nodeset: kolla-ansible-noble
     vars:
       base_distro: ubuntu
 
 - job:
     name: kolla-ansible-ubuntu-masakari
     parent: kolla-ansible-masakari-base
-    nodeset: kolla-ansible-jammy-masakari
+    nodeset: kolla-ansible-noble-masakari
     vars:
       base_distro: ubuntu
 
@@ -373,7 +438,7 @@
 - job:
     name: kolla-ansible-ubuntu-cells
     parent: kolla-ansible-cells-base
-    nodeset: kolla-ansible-jammy-multi
+    nodeset: kolla-ansible-noble-multi
     vars:
       base_distro: ubuntu
 
@@ -401,17 +466,16 @@
 - job:
     name: kolla-ansible-ubuntu-ovn
     parent: kolla-ansible-ovn-base
-    nodeset: kolla-ansible-jammy-multi
+    nodeset: kolla-ansible-noble-multi
     vars:
       base_distro: ubuntu
 
 - job:
     name: kolla-ansible-ubuntu-lets-encrypt
     parent: kolla-ansible-lets-encrypt-base
-    nodeset: kolla-ansible-jammy-multi
+    nodeset: kolla-ansible-noble-multi
     vars:
       base_distro: ubuntu
-      install_type: source
 
 - job:
     name: kolla-ansible-rocky9-lets-encrypt
@@ -419,7 +483,6 @@
     nodeset: kolla-ansible-rocky9-multi
     vars:
       base_distro: rocky
-      install_type: source
 
 - job:
     name: kolla-ansible-rocky9-prometheus-opensearch
@@ -431,7 +494,7 @@
 - job:
     name: kolla-ansible-ubuntu-prometheus-opensearch
     parent: kolla-ansible-prometheus-opensearch-base
-    nodeset: kolla-ansible-jammy
+    nodeset: kolla-ansible-noble
     vars:
       base_distro: ubuntu
 
@@ -461,7 +524,7 @@
 - job:
     name: kolla-ansible-ubuntu-venus
     parent: kolla-ansible-venus-base
-    nodeset: kolla-ansible-jammy
+    nodeset: kolla-ansible-noble
     vars:
       base_distro: ubuntu
 
@@ -473,15 +536,45 @@
       base_distro: rocky
 
 - job:
+    name: kolla-ansible-rocky9-haproxy-fqdn
+    parent: kolla-ansible-haproxy-base
+    nodeset: kolla-ansible-rocky9
+    vars:
+      base_distro: rocky
+      tls_enabled: true
+
+- job:
+    name: kolla-ansible-ubuntu-haproxy-fqdn
+    parent: kolla-ansible-haproxy-base
+    nodeset: kolla-ansible-noble
+    vars:
+      base_distro: ubuntu
+      tls_enabled: true
+
+- job:
     name: kolla-ansible-ubuntu-skyline
     parent: kolla-ansible-skyline-base
-    nodeset: kolla-ansible-jammy
+    nodeset: kolla-ansible-noble
     vars:
       base_distro: ubuntu
 
 - job:
     name: kolla-ansible-rocky9-skyline
     parent: kolla-ansible-skyline-base
+    nodeset: kolla-ansible-rocky9
+    vars:
+      base_distro: rocky
+
+- job:
+    name: kolla-ansible-ubuntu-skyline-sso
+    parent: kolla-ansible-skyline-sso-base
+    nodeset: kolla-ansible-noble
+    vars:
+      base_distro: ubuntu
+
+- job:
+    name: kolla-ansible-rocky9-skyline-sso
+    parent: kolla-ansible-skyline-sso-base
     nodeset: kolla-ansible-rocky9
     vars:
       base_distro: rocky

@@ -56,7 +56,7 @@ auth_type = password
 cafile = {{ openstack_cacert }}
 region_name = {{ openstack_region_name }}
 
-memcache_security_strategy = ENCRYPT
+memcache_security_strategy = {{ memcache_security_strategy }}
 memcache_secret_key = {{ memcache_secret_key }}
 memcached_servers = {% for host in groups['memcached'] %}{{ 'api' | kolla_address(host) | put_address_in_context('memcache') }}:{{ memcached_port }}{% if not loop.last %},{% endif %}{% endfor %}
 
@@ -69,6 +69,9 @@ policy_file = {{ gnocchi_policy_file }}
 {% if gnocchi_incoming_storage == 'redis' %}
 driver = redis
 redis_url = {{ redis_connection_string }}
+{% endif %}
+{% if gnocchi_backend_storage == 'swift' %}
+swift_cacert = {{ openstack_cacert }}
 {% endif %}
 
 [storage]
@@ -84,6 +87,7 @@ ceph_conffile = /etc/ceph/{{ gnocchi_ceph_cluster }}.conf
 {% elif gnocchi_backend_storage == 'swift' %}
 driver = swift
 swift_authurl = {{ keystone_internal_url }}
+swift_cacert = {{ openstack_cacert }}
 swift_auth_version = 3
 swift_user = service:{{ swift_keystone_user }}
 swift_key = {{ swift_keystone_password }}
