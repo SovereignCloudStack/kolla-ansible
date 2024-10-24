@@ -1,7 +1,7 @@
 ---
 - name: Check etcd containers
   become: true
-  kolla_docker:
+  kolla_container:
     action: "compare_container"
     common_options: "{{ docker_common_options }}"
     name: "{{ item.value.container_name }}"
@@ -9,9 +9,6 @@
     volumes: "{{ item.value.volumes }}"
     dimensions: "{{ item.value.dimensions }}"
     environment: "{{ item.value.environment }}"
-  when:
-    - item.value.enabled | bool
-    - inventory_hostname in groups[item.value.group]
-  with_dict: "{{ etcd_services }}"
+  with_dict: "{{ etcd_services | select_services_enabled_and_mapped_to_host }}"
   notify:
     - "Restart {{ item.key }} container"

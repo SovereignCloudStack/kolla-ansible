@@ -48,7 +48,7 @@ execution, which is described in
 
 #. Install Python build dependencies:
 
-   For CentOS, Rocky or openEuler, run:
+   For CentOS or Rocky, run:
 
    .. code-block:: console
 
@@ -65,7 +65,7 @@ Install dependencies for the virtual environment
 
 #. Install the virtual environment dependencies.
 
-   For CentOS, Rocky or openEuler, you don't need to do anything.
+   For CentOS or Rocky, you don't need to do anything.
 
    For Debian or Ubuntu, run:
 
@@ -90,12 +90,13 @@ Install dependencies for the virtual environment
       pip install -U pip
 
 #. Install `Ansible <http://www.ansible.com>`__. Kolla Ansible requires at least
-   Ansible ``6`` (or ansible-core ``2.14``) and supports up to ``7`` (or
-   ansible-core ``2.15``).
+   Ansible ``|ANSIBLE_VERSION_MIN|`` (or ansible-core
+   ``|ANSIBLE_CORE_VERSION_MIN|``) and supports up to ``|ANSIBLE_VERSION_MAX|``
+   (or ansible-core ``|ANSIBLE_CORE_VERSION_MAX|``).
 
    .. code-block:: console
 
-      pip install 'ansible-core>=2.14,<2.16'
+      pip install 'ansible-core>=|ANSIBLE_CORE_VERSION_MIN|,<|ANSIBLE_CORE_VERSION_MAX|.99'
 
 
 Install Kolla-ansible

@@ -68,11 +68,11 @@ tacker_database_shard:
 ########
 tacker_tag: "{{ openstack_tag }}"
 
-tacker_server_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/tacker-server"
+tacker_server_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/{{ docker_image_name_prefix }}tacker-server"
 tacker_server_tag: "{{ tacker_tag }}"
 tacker_server_image_full: "{{ tacker_server_image }}:{{ tacker_server_tag }}"
 
-tacker_conductor_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/tacker-conductor"
+tacker_conductor_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/{{ docker_image_name_prefix }}tacker-conductor"
 tacker_conductor_tag: "{{ tacker_tag }}"
 tacker_conductor_image_full: "{{ tacker_conductor_image }}:{{ tacker_conductor_tag }}"
 
@@ -107,7 +107,7 @@ tacker_conductor_healthcheck:
 
 tacker_server_default_volumes:
   - "{{ node_config_directory }}/tacker-server/:{{ container_config_directory }}/:ro"
-  - "{{ kolla_dev_repos_directory ~ '/tacker/tacker:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/tacker' if tacker_dev_mode | bool else '' }}"
+  - "{{ kolla_dev_repos_directory ~ '/tacker:/dev-mode/tacker' if tacker_dev_mode | bool else '' }}"
   - "/etc/localtime:/etc/localtime:ro"
   - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "kolla_logs:/var/log/kolla/"
@@ -116,7 +116,7 @@ tacker_server_default_volumes:
   - "kolla_tacker_csar_files:/var/lib/tacker/csar_files/"
 tacker_conductor_default_volumes:
   - "{{ node_config_directory }}/tacker-conductor/:{{ container_config_directory }}/:ro"
-  - "{{ kolla_dev_repos_directory ~ '/tacker/tacker:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/tacker' if tacker_dev_mode | bool else '' }}"
+  - "{{ kolla_dev_repos_directory ~ '/tacker:/dev-mode/tacker' if tacker_dev_mode | bool else '' }}"
   - "/etc/localtime:/etc/localtime:ro"
   - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "kolla_logs:/var/log/kolla/"
@@ -137,9 +137,6 @@ tacker_hosts: "{{ [groups['tacker'] | first] }}"
 ####################
 # OpenStack
 ####################
-tacker_internal_endpoint: "{{ tacker_internal_fqdn | kolla_url(internal_protocol, tacker_server_port) }}"
-tacker_public_endpoint: "{{ tacker_external_fqdn | kolla_url(public_protocol, tacker_server_public_port) }}"
-
 tacker_logging_debug: "{{ openstack_logging_debug }}"
 
 tacker_keystone_user: "tacker"

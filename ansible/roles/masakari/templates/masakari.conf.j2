@@ -36,7 +36,7 @@ region_name = {{ openstack_region_name }}
 cafile = {{ openstack_cacert }}
 
 {% if enable_memcached | bool %}
-memcache_security_strategy = ENCRYPT
+memcache_security_strategy = {{ memcache_security_strategy }}
 memcache_secret_key = {{ memcache_secret_key }}
 memcached_servers = {% for host in groups['memcached'] %}{{ 'api' | kolla_address(host) | put_address_in_context('memcache') }}:{{ memcached_port }}{% if not loop.last %},{% endif %}{% endfor %}
 {% endif %}
@@ -59,6 +59,9 @@ ssl_ca_file = {{ om_rabbitmq_cacert }}
 {% if om_enable_rabbitmq_high_availability | bool %}
 amqp_durable_queues = true
 {% endif %}
+{% if om_enable_rabbitmq_quorum_queues | bool %}
+rabbit_quorum_queue = true
+{% endif %}
 
 [oslo_middleware]
 enable_proxy_headers_parsing = True
@@ -76,6 +79,8 @@ connection = mysql+pymysql://{{ masakari_database_user }}:{{ masakari_database_p
 {% if masakari_coordination_backend == 'redis' %}
 backend_url = {{ redis_connection_string }}
 {% elif masakari_coordination_backend == 'etcd' %}
-backend_url = etcd3+{{ internal_protocol }}://{{ kolla_internal_fqdn }}:{{ etcd_client_port }}{% if openstack_cacert %}?ca_cert={{ openstack_cacert }}{% endif %}
+# NOTE(jan.gutter): etcd v3.4 removed the default `v3alpha` api_version. Until
+# tooz defaults to a newer version, we should explicitly specify `v3`
+backend_url = etcd3+{{ internal_protocol }}://{{ kolla_internal_fqdn }}:{{ etcd_client_port }}?api_version=v3{% if openstack_cacert %}?ca_cert={{ openstack_cacert }}{% endif %}
 {% endif %}
 {% endif %}

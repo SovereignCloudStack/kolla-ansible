@@ -4,17 +4,19 @@
     templates:
       - check-requirements
       - openstack-cover-jobs
-      - openstack-python3-jobs
       - ansible-role-jobs
       - publish-openstack-docs-pti
       - release-notes-jobs-python3
       - periodic-stable-jobs
     check:
       jobs:
+        - openstack-tox-pep8
+        - openstack-tox-py310
+        - openstack-tox-py311
+        - openstack-tox-py312
         - kolla-ansible-centos9s
         - kolla-ansible-debian
         - kolla-ansible-debian-podman
-        - kolla-ansible-openeuler
         - kolla-ansible-rocky9
         - kolla-ansible-rocky9-podman
         - kolla-ansible-ubuntu
@@ -25,6 +27,8 @@
         - kolla-ansible-ubuntu-multinode-ipv6
         - kolla-ansible-rocky9-bifrost
         - kolla-ansible-ubuntu-bifrost
+        - kolla-ansible-rocky9-zun
+        - kolla-ansible-ubuntu-zun
         - kolla-ansible-rocky9-swift
         - kolla-ansible-ubuntu-swift
         - kolla-ansible-rocky9-scenario-nfv
@@ -42,6 +46,7 @@
         - kolla-ansible-ubuntu-upgrade
         - kolla-ansible-ubuntu-cells
         - kolla-ansible-rocky9-cells
+        - kolla-ansible-debian-mariadb
         - kolla-ansible-rocky9-mariadb
         - kolla-ansible-ubuntu-mariadb
         - kolla-ansible-debian-ovn
@@ -62,10 +67,14 @@
         - kolla-ansible-rocky9-upgrade-cephadm
         - kolla-ansible-ubuntu-upgrade-cephadm
         - kolla-ansible-rocky9-hashi-vault
+        - kolla-ansible-rocky9-haproxy-fqdn
+        - kolla-ansible-ubuntu-haproxy-fqdn
         - kolla-ansible-ubuntu-lets-encrypt
         - kolla-ansible-rocky9-lets-encrypt
         - kolla-ansible-ubuntu-skyline
         - kolla-ansible-rocky9-skyline
+        - kolla-ansible-ubuntu-skyline-sso
+        - kolla-ansible-rocky9-skyline-sso
     check-arm64:
       jobs:
         - kolla-ansible-debian-aarch64
@@ -73,15 +82,28 @@
         - kolla-ansible-debian-upgrade-aarch64
     gate:
       jobs:
+        - openstack-tox-py310
+        - openstack-tox-py311
+        - openstack-tox-py312
         - kolla-ansible-debian
+        - kolla-ansible-debian-mariadb
         - kolla-ansible-debian-upgrade
         - kolla-ansible-debian-podman
         - kolla-ansible-rocky9
+        - kolla-ansible-rocky9-mariadb
+        - kolla-ansible-rocky9-prometheus-opensearch
+        - kolla-ansible-rocky9-prometheus-opensearch-upgrade
         - kolla-ansible-rocky9-upgrade
         - kolla-ansible-rocky9-podman
         - kolla-ansible-ubuntu
+        - kolla-ansible-ubuntu-mariadb
+        - kolla-ansible-ubuntu-prometheus-opensearch
+        - kolla-ansible-ubuntu-prometheus-opensearch-upgrade
         - kolla-ansible-ubuntu-upgrade
         - kolla-ansible-ubuntu-podman
+    post:
+      jobs:
+        - publish-openstack-python-branch-tarball
     experimental:
       jobs:
         - kolla-ansible-rocky9-swift-upgrade

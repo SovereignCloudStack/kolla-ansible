@@ -7,52 +7,19 @@ set -o pipefail
 # Enable unbuffered output for Ansible in Jenkins.
 export PYTHONUNBUFFERED=1
 
-
-function setup_openstack_clients {
-    # Prepare virtualenv for openstack deployment tests
-    local packages=(python-openstackclient python-heatclient)
-    if [[ $SCENARIO == zun ]]; then
-        packages+=(python-zunclient)
-    fi
-    if [[ $SCENARIO == ironic ]]; then
-        packages+=(python-ironicclient python-ironic-inspector-client)
-    fi
-    if [[ $SCENARIO == magnum ]]; then
-        packages+=(python-designateclient python-magnumclient python-troveclient)
-    fi
-    if [[ $SCENARIO == octavia ]]; then
-        packages+=(python-octaviaclient)
-    fi
-    if [[ $SCENARIO == masakari ]]; then
-        packages+=(python-masakariclient)
-    fi
-    if [[ $SCENARIO == scenario_nfv ]]; then
-        packages+=(python-tackerclient python-barbicanclient python-mistralclient)
-    fi
-    if [[ $SCENARIO == ovn ]]; then
-        packages+=(python-octaviaclient)
-    fi
-    if [[ "debian" == $BASE_DISTRO ]]; then
-        sudo apt -y install python3-venv
-    fi
-    python3 -m venv ~/openstackclient-venv
-    ~/openstackclient-venv/bin/pip install -U pip
-    ~/openstackclient-venv/bin/pip install -c $UPPER_CONSTRAINTS ${packages[@]}
-}
-
 function prepare_images {
     if [[ "${BUILD_IMAGE}" == "False" ]]; then
         return
     fi
 
     if [[ $SCENARIO != "bifrost" ]]; then
-        GATE_IMAGES="^cron,^fluentd,^glance,^haproxy,^keepalived,^keystone,^kolla-toolbox,^mariadb,^memcached,^neutron,^nova-,^openvswitch,^rabbitmq,^horizon,^heat,^placement"
+        GATE_IMAGES="^cron,^fluentd,^glance,^haproxy,^proxysql,^keepalived,^keystone,^kolla-toolbox,^mariadb,^memcached,^neutron,^nova-,^openvswitch,^rabbitmq,^horizon,^heat,^placement"
     else
         GATE_IMAGES="bifrost"
     fi
 
     if [[ $SCENARIO == "cephadm" ]]; then
-        GATE_IMAGES+=",^cinder"
+        GATE_IMAGES+=",^cinder,^redis"
     fi
 
     if [[ $SCENARIO == "cells" ]]; then
@@ -91,7 +58,7 @@ function prepare_images {
     fi
 
     if [[ $SCENARIO == "mariadb" ]]; then
-        GATE_IMAGES="^cron,^fluentd,^haproxy,^keepalived,^kolla-toolbox,^mariadb"
+        GATE_IMAGES="^cron,^fluentd,^haproxy,^proxysql,^keepalived,^kolla-toolbox,^mariadb"
     fi
 
     if [[ $SCENARIO == "lets-encrypt" ]]; then
@@ -99,14 +66,14 @@ function prepare_images {
     fi
 
     if [[ $SCENARIO == "prometheus-opensearch" ]]; then
-        GATE_IMAGES="^cron,^fluentd,^grafana,^haproxy,^keepalived,^kolla-toolbox,^mariadb,^memcached,^opensearch,^prometheus,^rabbitmq"
+        GATE_IMAGES="^cron,^fluentd,^grafana,^haproxy,^proxysql,^keepalived,^kolla-toolbox,^mariadb,^memcached,^opensearch,^prometheus,^rabbitmq"
     fi
 
     if [[ $SCENARIO == "venus" ]]; then
-        GATE_IMAGES="^cron,^opensearch,^fluentd,^haproxy,^keepalived,^keystone,^kolla-toolbox,^mariadb,^memcached,^rabbitmq,^venus"
+        GATE_IMAGES="^cron,^opensearch,^fluentd,^haproxy,^proxysql,^keepalived,^keystone,^kolla-toolbox,^mariadb,^memcached,^rabbitmq,^venus"
     fi
 
-    if [[ $SCENARIO == "skyline" ]]; then
+    if [[ $SCENARIO == "skyline" || $SCENARIO == "skyline-sso" ]]; then
         GATE_IMAGES+=",^skyline"
     fi
 
@@ -123,10 +90,14 @@ EOF
 
     sudo $CONTAINER_ENGINE run -d --net=host -e REGISTRY_HTTP_ADDR=0.0.0.0:4000 --restart=always -v /opt/kolla_registry/:/var/lib/registry --name registry registry:2
 
-    python3 -m venv ~/kolla-venv
-    . ~/kolla-venv/bin/activate
 
-    pip install "${KOLLA_SRC_DIR}" ${CONTAINER_ENGINE}
+    python3 -m venv ~/kolla-venv
+    source ~/kolla-venv/bin/activate
+    if [[ "$CONTAINER_ENGINE" == "docker" ]]; then
+        pip install "${KOLLA_SRC_DIR}" "docker"
+    else
+        pip install "${KOLLA_SRC_DIR}" "podman"
+    fi
 
     sudo ~/kolla-venv/bin/kolla-build
 
@@ -141,8 +112,6 @@ EOF
     deactivate
 }
 
-
-setup_openstack_clients
 
 RAW_INVENTORY=/etc/kolla/inventory
 

@@ -1,7 +1,7 @@
 ---
 - name: Check multipathd containers
   become: true
-  kolla_docker:
+  kolla_container:
     action: "compare_container"
     common_options: "{{ docker_common_options }}"
     name: "{{ item.value.container_name }}"
@@ -9,9 +9,6 @@
     ipc_mode: "{{ item.value.ipc_mode }}"
     privileged: "{{ item.value.privileged | default(False) }}"
     volumes: "{{ item.value.volumes }}"
-  when:
-    - inventory_hostname in groups[item.value.group]
-    - item.value.enabled | bool
-  with_dict: "{{ multipathd_services }}"
+  with_dict: "{{ multipathd_services | select_services_enabled_and_mapped_to_host }}"
   notify:
     - "Restart {{ item.key }} container"

@@ -13,13 +13,16 @@ transport_url = {{ rpc_transport_url }}
 transport_url = {{ notify_transport_url }}
 
 [oslo_messaging_rabbit]
-heartbeat_in_pthread = true
+heartbeat_in_pthread = false
 {% if om_enable_rabbitmq_tls | bool %}
 ssl = true
 ssl_ca_file = {{ om_rabbitmq_cacert }}
 {% endif %}
 {% if om_enable_rabbitmq_high_availability | bool %}
 amqp_durable_queues = true
+{% endif %}
+{% if om_enable_rabbitmq_quorum_queues | bool %}
+rabbit_quorum_queue = true
 {% endif %}
 
 [ironic]
@@ -53,7 +56,7 @@ password = {{ ironic_inspector_keystone_password }}
 cafile = {{ openstack_cacert }}
 region_name = {{ openstack_region_name }}
 
-memcache_security_strategy = ENCRYPT
+memcache_security_strategy = {{ memcache_security_strategy }}
 memcache_secret_key = {{ memcache_secret_key }}
 memcached_servers = {% for host in groups['memcached'] %}{{ 'api' | kolla_address(host) | put_address_in_context('memcache') }}:{{ memcached_port }}{% if not loop.last %},{% endif %}{% endfor %}
 {% endif %}
@@ -86,5 +89,12 @@ backend_url = {{ redis_connection_string }}
 # NOTE(yoctozepto): we must use etcd3gw (aka etcd3+http) due to issues with alternative (etcd3) and eventlet (as used by cinder)
 # see https://bugs.launchpad.net/kolla-ansible/+bug/1854932
 # and https://review.opendev.org/466098 for details
-backend_url = etcd3+{{ internal_protocol }}://{{ kolla_internal_fqdn }}:{{ etcd_client_port }}{% if openstack_cacert %}?ca_cert={{ openstack_cacert }}{% endif %}
+# NOTE(jan.gutter): etcd v3.4 removed the default `v3alpha` api_version. Until
+# tooz defaults to a newer version, we should explicitly specify `v3`
+backend_url = etcd3+{{ internal_protocol }}://{{ kolla_internal_fqdn }}:{{ etcd_client_port }}?api_version=v3{% if openstack_cacert %}?ca_cert={{ openstack_cacert }}{% endif %}
+{% endif %}
+
+{% if ironic_inspector_known_devices_file_path is defined %}
+[accelerators]
+known_devices = /etc/ironic-inspector/known_devices.yaml
 {% endif %}

@@ -4,7 +4,7 @@
     service_name: "neutron-server"
     service: "{{ neutron_services[service_name] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     action: "recreate_or_restart_container"
     common_options: "{{ docker_common_options }}"
     name: "{{ service.container_name }}"
@@ -21,7 +21,7 @@
     service_name: "neutron-openvswitch-agent"
     service: "{{ neutron_services[service_name] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     action: "recreate_or_restart_container"
     common_options: "{{ docker_common_options }}"
     name: "{{ service.container_name }}"
@@ -39,7 +39,7 @@
     service_name: "neutron-openvswitch-agent"
     service: "{{ neutron_services[service_name] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     action: "recreate_or_restart_container"
     common_options: "{{ docker_common_options }}"
     name: "{{ service.container_name }}"
@@ -57,7 +57,7 @@
     service_name: "neutron-linuxbridge-agent"
     service: "{{ neutron_services[service_name] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     action: "recreate_or_restart_container"
     common_options: "{{ docker_common_options }}"
     name: "{{ service.container_name }}"
@@ -75,7 +75,7 @@
     service_name: "neutron-dhcp-agent"
     service: "{{ neutron_services[service_name] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     action: "recreate_or_restart_container"
     common_options: "{{ docker_common_options }}"
     name: "{{ service.container_name }}"
@@ -90,6 +90,7 @@
 - name: Get container facts
   become: true
   kolla_container_facts:
+    action: get_containers
     container_engine: "{{ kolla_container_engine }}"
     name:
       - neutron_l3_agent
@@ -108,7 +109,7 @@
     service_name: "neutron-l3-agent"
     service: "{{ neutron_services[service_name] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     action: "recreate_or_restart_container"
     common_options: "{{ docker_common_options }}"
     name: "{{ service.container_name }}"
@@ -138,7 +139,7 @@
     service_name: "neutron-l3-agent"
     service: "{{ neutron_services[service_name] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     action: "recreate_or_restart_container"
     common_options: "{{ docker_common_options }}"
     name: "{{ service.container_name }}"
@@ -161,7 +162,7 @@
     service_name: "neutron-sriov-agent"
     service: "{{ neutron_services[service_name] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     action: "recreate_or_restart_container"
     common_options: "{{ docker_common_options }}"
     name: "{{ service.container_name }}"
@@ -178,7 +179,7 @@
     service_name: "neutron-mlnx-agent"
     service: "{{ neutron_services[service_name] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     action: "recreate_or_restart_container"
     common_options: "{{ docker_common_options }}"
     name: "{{ service.container_name }}"
@@ -194,7 +195,7 @@
     service_name: "neutron-eswitchd"
     service: "{{ neutron_services[service_name] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     action: "recreate_or_restart_container"
     common_options: "{{ docker_common_options }}"
     name: "{{ service.container_name }}"
@@ -210,7 +211,7 @@
     service_name: "neutron-tls-proxy"
     service: "{{ neutron_services[service_name] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     action: "recreate_or_restart_container"
     common_options: "{{ docker_common_options }}"
     name: "{{ service.container_name }}"
@@ -226,7 +227,7 @@
     service_name: "neutron-metadata-agent"
     service: "{{ neutron_services[service_name] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     action: "recreate_or_restart_container"
     common_options: "{{ docker_common_options }}"
     name: "{{ service.container_name }}"
@@ -243,7 +244,7 @@
     service_name: "neutron-ovn-metadata-agent"
     service: "{{ neutron_services[service_name] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     action: "recreate_or_restart_container"
     common_options: "{{ docker_common_options }}"
     name: "{{ service.container_name }}"
@@ -260,7 +261,7 @@
     service_name: "neutron-bgp-dragent"
     service: "{{ neutron_services[service_name] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     action: "recreate_or_restart_container"
     common_options: "{{ docker_common_options }}"
     name: "{{ service.container_name }}"
@@ -277,7 +278,7 @@
     service_name: "neutron-infoblox-ipam-agent"
     service: "{{ neutron_services[service_name] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     action: "recreate_or_restart_container"
     common_options: "{{ docker_common_options }}"
     name: "{{ service.container_name }}"
@@ -294,7 +295,7 @@
     service_name: "neutron-metering-agent"
     service: "{{ neutron_services[service_name] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     action: "recreate_or_restart_container"
     common_options: "{{ docker_common_options }}"
     name: "{{ service.container_name }}"
@@ -311,7 +312,7 @@
     service_name: "ironic-neutron-agent"
     service: "{{ neutron_services[service_name] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     action: "recreate_or_restart_container"
     common_options: "{{ docker_common_options }}"
     name: "{{ service.container_name }}"
@@ -328,7 +329,7 @@
     service_name: "neutron-ovn-agent"
     service: "{{ neutron_services[service_name] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     action: "recreate_or_restart_container"
     common_options: "{{ docker_common_options }}"
     name: "{{ service.container_name }}"

@@ -9,7 +9,7 @@ state_path = /var/lib/nova
 allow_resize_to_same_host = true
 
 {% if service_name == "nova-compute-ironic" %}
-host={{ ansible_facts.hostname }}-ironic
+host={{ nova_compute_ironic_custom_host | default(ansible_facts.hostname) }}-ironic
 log_file = /var/log/kolla/nova/nova-compute-ironic.log
 compute_driver = ironic.IronicDriver
 ram_allocation_ratio = 1.0
@@ -26,7 +26,7 @@ compute_driver = libvirt.LibvirtDriver
 # Though my_ip is not used directly, lots of other variables use $my_ip
 my_ip = {{ api_interface_address }}
 
-{% if enable_ceilometer | bool or enable_designate | bool %}
+{% if enable_ceilometer | bool %}
 instance_usage_audit = True
 instance_usage_audit_period = hour
 {% if enable_watcher | bool %}
@@ -35,6 +35,11 @@ compute_monitors=nova.compute.monitors.cpu.virt_driver
 {% endif %}
 
 transport_url = {{ nova_cell_rpc_transport_url }}
+
+{% if vendordata_file_path is defined and (service_name == 'nova-compute' or service_name == 'nova-compute-ironic') %}
+[api]
+vendordata_jsonfile_path = /etc/nova/vendordata.json
+{% endif %}
 
 [conductor]
 workers = {{ nova_cell_conductor_workers }}
@@ -192,6 +197,9 @@ ssl_ca_file = {{ om_rabbitmq_cacert }}
 {% endif %}
 {% if om_enable_rabbitmq_high_availability | bool %}
 amqp_durable_queues = true
+{% endif %}
+{% if om_enable_rabbitmq_quorum_queues | bool %}
+rabbit_quorum_queue = true
 {% endif %}
 
 {% if service_name in nova_cell_services_require_policy_json and nova_policy_file is defined %}

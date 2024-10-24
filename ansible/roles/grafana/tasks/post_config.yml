@@ -13,6 +13,13 @@
   delay: 2
   run_once: true
 
+- name: Remove old grafana docker volume
+  become: true
+  kolla_container:
+    action: "remove_volume"
+    name: grafana
+  when: grafana_remove_old_volume | bool
+
 - name: Enable grafana datasources
   become: true
   kolla_toolbox:
@@ -50,4 +57,4 @@
   register: grafana_response
   changed_when: grafana_response.status == 200
   run_once: true
-  when: grafana_custom_dashboard_file.stat.exists
+  when: "'grafana_home_dashboard.json' in check_extra_conf_grafana.files | map(attribute='path') | map('basename')"
