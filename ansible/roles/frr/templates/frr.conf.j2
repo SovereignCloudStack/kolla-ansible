@@ -1,0 +1,36 @@
+log file /var/log/kolla/frr/frr.log debugging
+# WIP: TODO add config for EVPN
+
+router bgp {{ bgp_local_asn }}
+  bgp router-id {{ bgp_loopback_ip }}
+  bgp log-neighbor-changes
+  bgp graceful-shutdown
+  no bgp default ipv4-unicast
+  no bgp ebgp-requires-policy
+
+  neighbor uplink peer-group
+  neighbor uplink remote-as internal
+  neighbor uplink remote-as 65001
+  neighbor {{ frr_neighbor_interface }} interface peer-group uplink
+  neighbor {{ frr_neighbor_ip }} peer-group uplink
+  address-family ipv4 unicast
+    redistribute connected route-map BGP_NIC
+    neighbor uplink activate
+    neighbor uplink allowas-in origin
+    neighbor uplink prefix-list only-host-prefixes out
+
+  exit-address-family
+
+  address-family ipv6 unicast
+    redistribute connected route-map BGP_NIC
+    neighbor uplink activate
+    neighbor uplink allowas-in origin
+    neighbor uplink prefix-list only-host-prefixes out
+  exit-address-family
+
+ip prefix-list only-default permit 0.0.0.0/0
+ip prefix-list only-host-prefixes permit 0.0.0.0/0 ge 32
+!
+route-map BGP_NIC permit 10
+  match interface {{ bgp_loopback_interface }}
+!
