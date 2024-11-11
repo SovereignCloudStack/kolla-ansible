@@ -428,7 +428,7 @@ neutron_ovn_metadata_agent_enable_healthchecks: "{{ enable_container_healthcheck
 neutron_ovn_metadata_agent_healthcheck_interval: "{{ default_container_healthcheck_interval }}"
 neutron_ovn_metadata_agent_healthcheck_retries: "{{ default_container_healthcheck_retries }}"
 neutron_ovn_metadata_agent_healthcheck_start_period: "{{ default_container_healthcheck_start_period }}"
-neutron_ovn_metadata_agent_healthcheck_test: ["CMD-SHELL", "healthcheck_port python {{ ovn_sb_db_port }}"]
+neutron_ovn_metadata_agent_healthcheck_test: ["CMD-SHELL", "healthcheck_port neutron-ovn-metadata-agent {{ ovsdb_port }}"]
 neutron_ovn_metadata_agent_healthcheck_timeout: "{{ default_container_healthcheck_timeout }}"
 neutron_ovn_metadata_agent_healthcheck:
   interval: "{{ neutron_ovn_metadata_agent_healthcheck_interval }}"
@@ -480,7 +480,7 @@ neutron_ovn_agent_enable_healthchecks: "{{ enable_container_healthchecks }}"
 neutron_ovn_agent_healthcheck_interval: "{{ default_container_healthcheck_interval }}"
 neutron_ovn_agent_healthcheck_retries: "{{ default_container_healthcheck_retries }}"
 neutron_ovn_agent_healthcheck_start_period: "{{ default_container_healthcheck_start_period }}"
-neutron_ovn_agent_healthcheck_test: ["CMD-SHELL", "healthcheck_port python {{ ovn_sb_db_port }}"]
+neutron_ovn_agent_healthcheck_test: ["CMD-SHELL", "healthcheck_port neutron-ovn-agent {{ ovsdb_port }}"]
 neutron_ovn_agent_healthcheck_timeout: "{{ default_container_healthcheck_timeout }}"
 neutron_ovn_agent_healthcheck:
   interval: "{{ neutron_ovn_agent_healthcheck_interval }}"
@@ -660,6 +660,8 @@ neutron_subprojects:
     enabled: "{{ enable_neutron_fwaas | bool }}"
   - name: "networking-sfc"
     enabled: "{{ enable_neutron_sfc | bool }}"
+  - name: "networking-bgpvpn"
+    enabled: "{{ enable_neutron_bgpvpn | bool }}"
   - name: "neutron-dynamic-routing"
     enabled: "{{ enable_neutron_bgp_dragent | bool }}"
   - name: "neutron-vpnaas"
@@ -755,6 +757,8 @@ service_plugins:
     enabled: "{{ enable_neutron_packet_logging | bool }}"
   - name: "taas"
     enabled: "{{ enable_neutron_taas | bool }}"
+  - name: "bgpvpn"
+    enabled: "{{ enable_neutron_bgpvpn | bool }}"
 
 neutron_service_plugins: "{{ service_plugins | selectattr('enabled', 'equalto', true) | list }}"
 

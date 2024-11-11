@@ -13,7 +13,7 @@ function prepare_images {
     fi
 
     if [[ $SCENARIO != "bifrost" ]]; then
-        GATE_IMAGES="^cron,^fluentd,^glance,^haproxy,^keepalived,^keystone,^kolla-toolbox,^mariadb,^memcached,^neutron,^nova-,^openvswitch,^rabbitmq,^horizon,^heat,^placement"
+        GATE_IMAGES="^cron,^fluentd,^glance,^haproxy,^proxysql,^keepalived,^keystone,^kolla-toolbox,^mariadb,^memcached,^neutron,^nova-,^openvswitch,^rabbitmq,^horizon,^heat,^placement"
     else
         GATE_IMAGES="bifrost"
     fi
@@ -54,11 +54,11 @@ function prepare_images {
     fi
 
     if [[ $SCENARIO == "ovn" ]]; then
-        GATE_IMAGES+=",^redis,^octavia,^ovn"
+        GATE_IMAGES+=",^frr,^redis,^octavia,^ovn"
     fi
 
     if [[ $SCENARIO == "mariadb" ]]; then
-        GATE_IMAGES="^cron,^fluentd,^haproxy,^keepalived,^kolla-toolbox,^mariadb"
+        GATE_IMAGES="^cron,^fluentd,^haproxy,^proxysql,^keepalived,^kolla-toolbox,^mariadb"
     fi
 
     if [[ $SCENARIO == "lets-encrypt" ]]; then
@@ -66,14 +66,14 @@ function prepare_images {
     fi
 
     if [[ $SCENARIO == "prometheus-opensearch" ]]; then
-        GATE_IMAGES="^cron,^fluentd,^grafana,^haproxy,^keepalived,^kolla-toolbox,^mariadb,^memcached,^opensearch,^prometheus,^rabbitmq"
+        GATE_IMAGES="^cron,^fluentd,^grafana,^haproxy,^proxysql,^keepalived,^kolla-toolbox,^mariadb,^memcached,^opensearch,^prometheus,^rabbitmq"
     fi
 
     if [[ $SCENARIO == "venus" ]]; then
-        GATE_IMAGES="^cron,^opensearch,^fluentd,^haproxy,^keepalived,^keystone,^kolla-toolbox,^mariadb,^memcached,^rabbitmq,^venus"
+        GATE_IMAGES="^cron,^opensearch,^fluentd,^haproxy,^proxysql,^keepalived,^keystone,^kolla-toolbox,^mariadb,^memcached,^rabbitmq,^venus"
     fi
 
-    if [[ $SCENARIO == "skyline" ]]; then
+    if [[ $SCENARIO == "skyline" || $SCENARIO == "skyline-sso" ]]; then
         GATE_IMAGES+=",^skyline"
     fi
 
@@ -116,7 +116,7 @@ EOF
 RAW_INVENTORY=/etc/kolla/inventory
 
 source $KOLLA_ANSIBLE_VENV_PATH/bin/activate
-kolla-ansible -i ${RAW_INVENTORY} -vvv bootstrap-servers &> /tmp/logs/ansible/bootstrap-servers
+kolla-ansible bootstrap-servers -i ${RAW_INVENTORY} -vvv  &> /tmp/logs/ansible/bootstrap-servers
 deactivate
 
 prepare_images
