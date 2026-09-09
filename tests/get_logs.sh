@@ -15,17 +15,21 @@ copy_logs() {
         echo "Invalid container engine: ${CONTAINER_ENGINE}"
         exit 1
     fi
-
-    cp -rnL ${VOLUMES_DIR}/kolla_logs/_data/* ${LOG_DIR}/kolla/
-    cp -rnL /etc/kolla/* ${LOG_DIR}/kolla_configs/
+    cp -rL /home/zuul/tempest ${LOG_DIR}/
+    [ -d ${VOLUMES_DIR}/kolla_logs/_data ] && cp -rnL ${VOLUMES_DIR}/kolla_logs/_data/* ${LOG_DIR}/kolla/
+    [ -d /etc/kolla ] && cp -rnL /etc/kolla/* ${LOG_DIR}/kolla_configs/
     # Don't save the IPA images.
-    rm ${LOG_DIR}/kolla_configs/config/ironic/ironic-agent.{kernel,initramfs}
+    rm -f ${LOG_DIR}/kolla_configs/config/ironic/ironic-agent.{kernel,initramfs}
     mkdir ${LOG_DIR}/system_configs/
     cp -rL /etc/{hostname,hosts,host.conf,resolv.conf,nsswitch.conf,systemd} ${LOG_DIR}/system_configs/
     # copy docker configs if used
     if [ "$CONTAINER_ENGINE" = "docker" ]; then
         cp -rL /etc/docker/ ${LOG_DIR}/system_configs/
+    elif [ "$CONTAINER_ENGINE" = "podman" ]; then
+        cp -rL /etc/containers/ ${LOG_DIR}/system_configs/
     fi
+    # List all permissions to log files
+    ls -lLR /var/log/kolla > ${LOG_DIR}/system_logs/ls_lr_var_log_kolla.txt
     # Remove /var/log/kolla link to not double the data uploaded
     unlink /var/log/kolla
     cp -rvnL /var/log/* ${LOG_DIR}/system_logs/
@@ -36,10 +40,6 @@ copy_logs() {
         journalctl --no-pager -u ${CONTAINER_ENGINE}.service > ${LOG_DIR}/system_logs/${CONTAINER_ENGINE}.log
         if [ "$CONTAINER_ENGINE" = "docker" ]; then
             journalctl --no-pager -u containerd.service > ${LOG_DIR}/system_logs/containerd.log
-        fi
-    else
-        if [ "$CONTAINER_ENGINE" = "docker" ]; then
-            cp /var/log/upstart/docker.log ${LOG_DIR}/system_logs/docker.log
         fi
     fi
 
@@ -101,28 +101,29 @@ copy_logs() {
     ps -eo user,pid,ppid,lwp,%cpu,%mem,size,rss,cmd > ${LOG_DIR}/system_logs/ps.txt
 
     # container engine related information
-    (${CONTAINER_ENGINE} info &&
-    ${CONTAINER_ENGINE} images &&
-    ${CONTAINER_ENGINE} ps -a &&
-    ${CONTAINER_ENGINE} network ls &&
-    ${CONTAINER_ENGINE} inspect $(${CONTAINER_ENGINE} ps -aq)) > ${LOG_DIR}/system_logs/${CONTAINER_ENGINE}-info.txt
+    [ `command -v ${CONTAINER_ENGINE}` ] &&
+    (   ${CONTAINER_ENGINE} info &&
+        ${CONTAINER_ENGINE} images &&
+        ${CONTAINER_ENGINE} ps -a &&
+        ${CONTAINER_ENGINE} network ls &&
+        ${CONTAINER_ENGINE} inspect $(${CONTAINER_ENGINE} ps -aq)) > ${LOG_DIR}/system_logs/${CONTAINER_ENGINE}-info.txt
 
     # save dbus services
-    dbus-send --system --print-reply --dest=org.freedesktop.DBus /org/freedesktop/DBus org.freedesktop.DBus.ListNames > ${LOG_DIR}/system_logs/dbus-services.txt
+    [ `command -v dbus-send` ] && dbus-send --system --print-reply --dest=org.freedesktop.DBus /org/freedesktop/DBus org.freedesktop.DBus.ListNames > ${LOG_DIR}/system_logs/dbus-services.txt
 
     # cephadm related logs
     if [ `command -v cephadm` ]; then
         mkdir -p ${LOG_DIR}/ceph
-        sudo cp /etc/ceph/ceph.conf ${LOG_DIR}/ceph
-        sudo cp /var/run/ceph/*/cluster.yml ${LOG_DIR}/ceph/cluster.yml
-        sudo cp /var/log/ceph/cephadm.log* ${LOG_DIR}/ceph/
+        [ -d /etc/ceph ] && sudo cp /etc/ceph/ceph.conf ${LOG_DIR}/ceph
+        [ -d /var/run/ceph ] && sudo cp /var/run/ceph/*/cluster.yml ${LOG_DIR}/ceph/cluster.yml
+        [ -d /var/log/ceph ] && sudo cp /var/log/ceph/cephadm.log* ${LOG_DIR}/ceph/
         sudo cephadm shell -- ceph --connect-timeout 5 -s > ${LOG_DIR}/ceph/ceph_s.txt
         sudo cephadm shell -- ceph --connect-timeout 5 osd tree > ${LOG_DIR}/ceph/ceph_osd_tree.txt
     fi
 
     # bifrost related logs
     if [[ $(${CONTAINER_ENGINE} ps --filter name=bifrost_deploy --format "{{.Names}}") ]]; then
-        for service in dnsmasq ironic ironic-api ironic-conductor ironic-inspector mariadb nginx; do
+        for service in dnsmasq ironic ironic-api ironic-conductor mariadb nginx; do
             mkdir -p ${LOG_DIR}/kolla/$service
             ${CONTAINER_ENGINE} exec bifrost_deploy systemctl status $service > ${LOG_DIR}/kolla/$service/systemd-status-$service.txt
         done
@@ -133,12 +134,6 @@ copy_logs() {
     if [[ $(${CONTAINER_ENGINE} ps --filter name=haproxy --format "{{.Names}}") ]]; then
         mkdir -p ${LOG_DIR}/kolla/haproxy
         ${CONTAINER_ENGINE} exec haproxy bash -c 'echo show stat | socat stdio /var/lib/kolla/haproxy/haproxy.sock' > ${LOG_DIR}/kolla/haproxy/stats.txt
-    fi
-
-    # FIXME: remove
-    if [[ $(${CONTAINER_ENGINE} ps -a --filter name=ironic_inspector --format "{{.Names}}") ]]; then
-        mkdir -p ${LOG_DIR}/kolla/ironic-inspector
-        ls -lR ${VOLUMES_DIR}/ironic_inspector_dhcp_hosts > ${LOG_DIR}/kolla/ironic-inspector/var-lib-ls.txt
     fi
 
     for container in $(${CONTAINER_ENGINE} ps -a --format "{{.Names}}"); do

@@ -1,3 +1,4 @@
 ---
-- import_role:
+- name: Pull nova-cell images
+  ansible.builtin.import_role:
     role: service-images-pull

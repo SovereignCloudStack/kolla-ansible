@@ -21,7 +21,7 @@ shows which automatically appends ``sriovnicswitch`` to the
 .. path /etc/kolla/globals.yml
 .. code-block:: yaml
 
-   enable_neutron_sriov: "yes"
+   enable_neutron_sriov: true
 
 It is also a requirement to define physnet:interface mappings for all
 SRIOV devices as shown in the following example where ``sriovtenant1`` is the
@@ -107,7 +107,7 @@ Verify the SRIOV Agent container is running on the compute node(s):
 
    # docker ps --filter name=neutron_sriov_agent
    CONTAINER ID   IMAGE                                                                COMMAND        CREATED         STATUS         PORTS  NAMES
-   b03a8f4c0b80   10.10.10.10:4000/registry/centos-source-neutron-sriov-agent:17.04.0  "kolla_start"  18 minutes ago  Up 18 minutes         neutron_sriov_agent
+   b03a8f4c0b80   10.10.10.10:4000/registry/neutron-sriov-agent:master-rocky-10        "kolla_start"  18 minutes ago  Up 18 minutes         neutron_sriov_agent
 
 Verify the SRIOV Agent service is present and UP:
 

@@ -1,6 +1,4 @@
 #!/bin/bash -x
-{% set keystone_cmd = 'apache2' if kolla_base_distro in ['ubuntu', 'debian'] else 'httpd' %}
-
 set -o errexit
 set -o pipefail
 
@@ -21,4 +19,4 @@ while [ ! -f "${FERNET_KEY_DIR}/0" ]; do
     fi
 done
 
-exec /usr/sbin/{{ keystone_cmd }} $@
+exec uwsgi /etc/keystone/keystone-api-uwsgi.ini

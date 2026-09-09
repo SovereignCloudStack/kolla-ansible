@@ -1,10 +1,15 @@
 ---
-- include_tasks: remove-ha-all-policy.yml
-  when:
-    - not om_enable_rabbitmq_high_availability | bool
+- name: Import tasks from version-check.yml
+  ansible.builtin.import_tasks: version-check.yml
 
-- import_tasks: config.yml
+- name: Include tasks from remove-ha-all-policy.yml
+  ansible.builtin.include_tasks: remove-ha-all-policy.yml
 
-- import_tasks: feature-flags.yml
+- name: Configure rabbitmq
+  ansible.builtin.import_tasks: config.yml
 
-- import_tasks: check-containers.yml
+- name: Import tasks from feature-flags.yml
+  ansible.builtin.import_tasks: feature-flags.yml
+
+- name: Check rabbitmq containers
+  ansible.builtin.import_tasks: check-containers.yml

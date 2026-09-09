@@ -4,7 +4,7 @@
     service_name: "mariadb"
     service: "{{ mariadb_services[service_name] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     action: "recreate_or_restart_container"
     common_options: "{{ docker_common_options }}"
     name: "{{ service.container_name }}"
@@ -16,30 +16,35 @@
 
 # NOTE(yoctozepto): We have to loop this to avoid breaking on connection resets
 - name: Wait for MariaDB service port liveness
-  wait_for:
+  ansible.builtin.wait_for:
     host: "{{ api_interface_address }}"
     port: "{{ mariadb_port }}"
     connect_timeout: 1
     timeout: 60
     search_regex: "MariaDB"
   register: check_mariadb_port
+  check_mode: false
   until: check_mariadb_port is success
   retries: 10
   delay: 6
 
 - name: Wait for MariaDB service to sync WSREP
   become: true
-  command: >-
-    {{ kolla_container_engine }} exec {{ mariadb_service.container_name }}
-    mysql -uroot -p{{ database_password }} -P {{ mariadb_port }}
-    --silent --skip-column-names
-    -e 'SHOW STATUS LIKE "wsrep_local_state_comment"'
-  changed_when: false
+  kolla_toolbox:
+    container_engine: "{{ kolla_container_engine }}"
+    module_name: mysql_query
+    module_args:
+      login_db: "mysql"
+      login_host: "{{ api_interface_address }}"
+      login_port: "{{ mariadb_port }}"
+      login_user: "{{ database_user }}"
+      login_password: "{{ database_password }}"
+      query: 'SHOW STATUS LIKE "wsrep_local_state_comment"'
   register: result
-  until: result.stdout == "wsrep_local_state_comment\tSynced"
+  until: result.query_result[0][0]['Value'] == "Synced"
   retries: 10
   delay: 6
-  no_log: true
+  check_mode: false
   when:
     # NOTE(yoctozepto): we don't want to wait for new nodes to fully sync
     # with an existing cluster as this could take time

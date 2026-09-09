@@ -11,14 +11,14 @@ log_file = /var/log/kolla/cloudkitty/cloudkitty-api.log
 transport_url = {{ rpc_transport_url }}
 
 [database]
-connection = mysql+pymysql://{{ cloudkitty_database_user }}:{{ cloudkitty_database_password }}@{{ cloudkitty_database_address }}/{{ cloudkitty_database_name }}
+connection = mysql+pymysql://{{ cloudkitty_database_user }}:{{ cloudkitty_database_password }}@{{ cloudkitty_database_address }}/{{ cloudkitty_database_name }}{{ '?ssl_ca=' ~ openstack_cacert if cloudkitty_database_enable_tls_internal | bool }}
 connection_recycle_time = {{ database_connection_recycle_time }}
 max_pool_size = {{ database_max_pool_size }}
 max_retries = -1
 
 [keystone_authtoken]
 service_type = rating
-www_authenticate_uri = {{ keystone_internal_url }}
+www_authenticate_uri = {{ keystone_public_url }}
 auth_url = {{ keystone_internal_url }}
 auth_type = password
 project_domain_id = {{ default_project_domain_id }}
@@ -29,12 +29,12 @@ password = {{ cloudkitty_keystone_password }}
 region_name = {{ openstack_region_name }}
 cafile = {{ openstack_cacert }}
 
-memcache_security_strategy = ENCRYPT
+memcache_security_strategy = {{ memcache_security_strategy }}
 memcache_secret_key = {{ memcache_secret_key }}
 memcached_servers = {% for host in groups['memcached'] %}{{ 'api' | kolla_address(host) | put_address_in_context('memcache') }}:{{ memcached_port }}{% if not loop.last %},{% endif %}{% endfor %}
 
 [oslo_middleware]
-enable_proxy_headers_parsing = True
+enable_proxy_headers_parsing = true
 
 [oslo_concurrency]
 lock_path = /var/lib/cloudkitty/tmp
@@ -45,19 +45,30 @@ policy_file = {{ cloudkitty_policy_file }}
 {% endif %}
 
 [oslo_messaging_rabbit]
+use_queue_manager = true
+{% if service_name == 'cloudkitty-api' %}
+processname = {{ service_name }}
+{% endif %}
 heartbeat_in_pthread = {{ service_name == 'cloudkitty-api' }}
 {% if om_enable_rabbitmq_tls | bool %}
 ssl = true
 ssl_ca_file = {{ om_rabbitmq_cacert }}
 {% endif %}
-{% if om_enable_rabbitmq_high_availability | bool %}
-amqp_durable_queues = true
+rabbit_quorum_queue = true
+{% if om_enable_rabbitmq_stream_fanout | bool %}
+rabbit_stream_fanout = true
+rabbit_qos_prefetch_count = {{ om_rabbitmq_qos_prefetch_count }}
 {% endif %}
+rabbit_transient_quorum_queue = true
 
 [collect]
 collector = {{ cloudkitty_collector_backend }}
 {% if cloudkitty_custom_metrics_used %}
 metrics_conf = /etc/cloudkitty/{{ cloudkitty_custom_metrics_yaml_file }}
+{% endif %}
+
+{% if cloudkitty_collector_backend == "prometheus" and enable_prometheus_openstack_exporter | bool %}
+scope_key = tenant_id
 {% endif %}
 
 {% if cloudkitty_collector_backend == "gnocchi" %}
@@ -72,9 +83,9 @@ prometheus_url = {{ cloudkitty_prometheus_url }}
 prometheus_user = admin
 prometheus_password = {{ prometheus_password }}
 
-{% if cloudkitty_prometheus_cafile is defined %}
+{%     if cloudkitty_prometheus_cafile is defined %}
 cafile = {{ cloudkitty_prometheus_cafile }}
-{% endif %}
+{%     endif %}
 
 insecure = {{ cloudkitty_prometheus_insecure_connections }}
 {% endif %}
@@ -98,9 +109,9 @@ prometheus_url = {{ cloudkitty_prometheus_url }}
 prometheus_user = admin
 prometheus_password = {{ prometheus_password }}
 
-{% if cloudkitty_prometheus_cafile is defined %}
+{%     if cloudkitty_prometheus_cafile is defined %}
 cafile = {{ cloudkitty_prometheus_cafile }}
-{% endif %}
+{%     endif %}
 
 insecure = {{ cloudkitty_prometheus_insecure_connections }}
 {% endif %}
@@ -110,7 +121,7 @@ host_ip = {{ api_interface_address }}
 port = {{ cloudkitty_api_port }}
 
 [orchestrator]
-coordination_url = mysql://{{ cloudkitty_database_user }}:{{ cloudkitty_database_password }}@{{ cloudkitty_database_address }}/{{ cloudkitty_database_name }}
+coordination_url = mysql://{{ cloudkitty_database_user }}:{{ cloudkitty_database_password }}@{{ cloudkitty_database_address }}/{{ cloudkitty_database_name }}{{ '?ssl_ca=' ~ openstack_cacert if cloudkitty_database_enable_tls_internal | bool }}
 max_workers = {{ cloudkitty_processor_workers }}
 
 [storage]
@@ -121,38 +132,24 @@ version = 1
 version = 2
 {% endif %}
 
-{% if cloudkitty_storage_backend == 'influxdb' %}
-[storage_influxdb]
-database = {{ cloudkitty_influxdb_name }}
-host = {{ influxdb_address }}
-port = {{ influxdb_http_port }}
-
-{% if cloudkitty_influxdb_retention_policy is defined %}
-retention_policy = {{ cloudkitty_influxdb_retention_policy }}
-{% endif %}
-
-{% if cloudkitty_influxdb_use_ssl is defined %}
-use_ssl = {{ cloudkitty_influxdb_use_ssl }}
-{% endif %}
-
-{% if cloudkitty_influxdb_insecure_connections is defined %}
-insecure = {{ cloudkitty_influxdb_insecure_connections }}
-{% endif %}
-
-{% if cloudkitty_influxdb_cafile is defined %}
-cafile = {{ cloudkitty_influxdb_cafile }}
-{% endif %}
-
-{% endif %}
-
 {% if cloudkitty_storage_backend == 'elasticsearch' %}
 [storage_elasticsearch]
 host = {{ cloudkitty_elasticsearch_url }}
 index_name = {{ cloudkitty_elasticsearch_index_name }}
 insecure = {{ cloudkitty_elasticsearch_insecure_connections }}
 
-{% if cloudkitty_elasticsearch_cafile is defined %}
+{%     if cloudkitty_elasticsearch_cafile | length > 0 %}
 cafile = {{ cloudkitty_elasticsearch_cafile }}
+{%     endif %}
 {% endif %}
 
+{% if cloudkitty_storage_backend == 'opensearch' %}
+[storage_opensearch]
+host = {{ cloudkitty_opensearch_url }}
+index_name = {{ cloudkitty_opensearch_index_name }}
+insecure = {{ cloudkitty_opensearch_insecure_connections }}
+
+{%     if cloudkitty_opensearch_cafile | length > 0 %}
+cafile = {{ cloudkitty_opensearch_cafile }}
+{%     endif %}
 {% endif %}

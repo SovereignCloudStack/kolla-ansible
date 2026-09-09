@@ -138,13 +138,13 @@ be enabled by appending ``--type source`` to the :command:`kolla-build` or
 
    .. note::
 
-      By default :command:`kolla-build` will build all containers using CentOS as
+      By default :command:`kolla-build` will build all containers using Rocky as
       the base image. To change this behavior, use the following parameter with
       :command:`kolla-build` or ``tools/build.py`` command:
 
       .. code-block:: console
 
-         --base [centos|debian|rocky|ubuntu]
+         --base [debian|rocky|ubuntu]
 
 Configure and Deploy a Bifrost Container
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -284,13 +284,15 @@ For development:
 
 .. code-block:: console
 
-   cd kolla-ansible
-   tools/kolla-ansible deploy-bifrost
+   pip install -e ./kolla-ansible
+   kolla-ansible deploy-bifrost
+
 
 For Production:
 
 .. code-block:: console
 
+   pip install -U ./kolla-ansible
    kolla-ansible deploy-bifrost
 
 Deploy Bifrost manually
@@ -376,12 +378,14 @@ For Development:
 
 .. code-block:: console
 
-   tools/kolla-ansible deploy-servers
+   pip install -e ./kolla-ansible
+   kolla-ansible deploy-servers
 
 For Production:
 
 .. code-block:: console
 
+   pip install -U ./kolla-ansible
    kolla-ansible deploy-servers
 
 Manually

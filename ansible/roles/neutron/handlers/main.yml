@@ -4,7 +4,7 @@
     service_name: "neutron-server"
     service: "{{ neutron_services[service_name] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     action: "recreate_or_restart_container"
     common_options: "{{ docker_common_options }}"
     name: "{{ service.container_name }}"
@@ -13,33 +13,74 @@
     dimensions: "{{ service.dimensions }}"
     privileged: "{{ service.privileged | default(False) }}"
     healthcheck: "{{ service.healthcheck | default(omit) }}"
-  when:
-    - kolla_action != "config"
+
+- name: Restart neutron-rpc-server container
+  vars:
+    service_name: "neutron-rpc-server"
+    service: "{{ neutron_services[service_name] }}"
+  become: true
+  kolla_container:
+    action: "recreate_or_restart_container"
+    common_options: "{{ docker_common_options }}"
+    name: "{{ service.container_name }}"
+    image: "{{ service.image }}"
+    volumes: "{{ service.volumes | reject('equalto', '') | list }}"
+    dimensions: "{{ service.dimensions }}"
+    privileged: "{{ service.privileged | default(False) }}"
+    healthcheck: "{{ service.healthcheck | default(omit) }}"
+
+- name: Restart neutron-periodic-worker container
+  vars:
+    service_name: "neutron-periodic-worker"
+    service: "{{ neutron_services[service_name] }}"
+  become: true
+  kolla_container:
+    action: "recreate_or_restart_container"
+    common_options: "{{ docker_common_options }}"
+    name: "{{ service.container_name }}"
+    image: "{{ service.image }}"
+    volumes: "{{ service.volumes | reject('equalto', '') | list }}"
+    dimensions: "{{ service.dimensions }}"
+    privileged: "{{ service.privileged | default(False) }}"
+    healthcheck: "{{ service.healthcheck | default(omit) }}"
+
+- name: Restart neutron-ovn-maintenance-worker container
+  vars:
+    service_name: "neutron-ovn-maintenance-worker"
+    service: "{{ neutron_services[service_name] }}"
+  become: true
+  kolla_container:
+    action: "recreate_or_restart_container"
+    common_options: "{{ docker_common_options }}"
+    name: "{{ service.container_name }}"
+    image: "{{ service.image }}"
+    volumes: "{{ service.volumes | reject('equalto', '') | list }}"
+    dimensions: "{{ service.dimensions }}"
+    privileged: "{{ service.privileged | default(False) }}"
+    healthcheck: "{{ service.healthcheck | default(omit) }}"
 
 - name: Restart neutron-openvswitch-agent container
   vars:
     service_name: "neutron-openvswitch-agent"
     service: "{{ neutron_services[service_name] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     action: "recreate_or_restart_container"
     common_options: "{{ docker_common_options }}"
     name: "{{ service.container_name }}"
     image: "{{ service.image }}"
-    environment: "{{ service.environment }}"
+    environment: "{{ service.environment | default(omit) }}"
     volumes: "{{ service.volumes | reject('equalto', '') | list }}"
     dimensions: "{{ service.dimensions }}"
     privileged: "{{ service.privileged | default(False) }}"
     healthcheck: "{{ service.healthcheck | default(omit) }}"
-  when:
-    - kolla_action != "config"
 
 - name: Restart fake neutron-openvswitch-agent container
   vars:
     service_name: "neutron-openvswitch-agent"
     service: "{{ neutron_services[service_name] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     action: "recreate_or_restart_container"
     common_options: "{{ docker_common_options }}"
     name: "{{ service.container_name }}"
@@ -49,33 +90,13 @@
     privileged: "{{ service.privileged | default(False) }}"
     healthcheck: "{{ service.healthcheck | default(omit) }}"
   with_sequence: "start=1 end={{ num_nova_fake_per_node }}"
-  when:
-    - kolla_action != "config"
-
-- name: Restart neutron-linuxbridge-agent container
-  vars:
-    service_name: "neutron-linuxbridge-agent"
-    service: "{{ neutron_services[service_name] }}"
-  become: true
-  kolla_docker:
-    action: "recreate_or_restart_container"
-    common_options: "{{ docker_common_options }}"
-    name: "{{ service.container_name }}"
-    image: "{{ service.image }}"
-    environment: "{{ service.environment }}"
-    volumes: "{{ service.volumes | reject('equalto', '') | list }}"
-    dimensions: "{{ service.dimensions }}"
-    privileged: "{{ service.privileged | default(False) }}"
-    healthcheck: "{{ service.healthcheck | default(omit) }}"
-  when:
-    - kolla_action != "config"
 
 - name: Restart neutron-dhcp-agent container
   vars:
     service_name: "neutron-dhcp-agent"
     service: "{{ neutron_services[service_name] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     action: "recreate_or_restart_container"
     common_options: "{{ docker_common_options }}"
     name: "{{ service.container_name }}"
@@ -84,23 +105,23 @@
     dimensions: "{{ service.dimensions }}"
     privileged: "{{ service.privileged | default(False) }}"
     healthcheck: "{{ service.healthcheck | default(omit) }}"
-  when:
-    - kolla_action != "config"
+    pid_mode: "{{ service.pid_mode | default(omit) }}"
+    cgroupns_mode: "{{ service.cgroupns_mode | default(omit) }}"
+    environment: "{{ service.environment | default(omit) }}"
 
 - name: Get container facts
   become: true
   kolla_container_facts:
+    action: get_containers
     container_engine: "{{ kolla_container_engine }}"
     name:
       - neutron_l3_agent
   register: container_facts
-  when:
-    - kolla_action != "config"
   listen: Restart neutron-l3-agent container
 
 - name: Group hosts
-  group_by:
-    key: neutron_l3_agent_running_{{ container_facts['neutron_l3_agent'] is defined }}
+  ansible.builtin.group_by:
+    key: neutron_l3_agent_running_{{ container_facts.containers['neutron_l3_agent'] is defined }}
   listen: Restart neutron-l3-agent container
 
 - name: Start stopped neutron-l3-agent container
@@ -108,29 +129,29 @@
     service_name: "neutron-l3-agent"
     service: "{{ neutron_services[service_name] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     action: "recreate_or_restart_container"
     common_options: "{{ docker_common_options }}"
     name: "{{ service.container_name }}"
     image: "{{ service.image }}"
-    environment: "{{ service.environment }}"
+    environment: "{{ service.environment | default(omit) }}"
     volumes: "{{ service.volumes | reject('equalto', '') | list }}"
     dimensions: "{{ service.dimensions }}"
     privileged: "{{ service.privileged | default(False) }}"
     healthcheck: "{{ service.healthcheck | default(omit) }}"
+    pid_mode: "{{ service.pid_mode | default(omit) }}"
+    cgroupns_mode: "{{ service.cgroupns_mode | default(omit) }}"
   when:
-    - kolla_action != "config"
     - groups['neutron_l3_agent_running_False'] is defined
     - inventory_hostname in groups['neutron_l3_agent_running_False']
   listen: Restart neutron-l3-agent container
 
 - name: Wait if container starting
-  wait_for:
+  ansible.builtin.wait_for:
     timeout: "{{ neutron_l3_agent_failover_delay }}"
   when:
     - groups['neutron_l3_agent_running_False'] is defined
     - groups['neutron_l3_agent_running_True'] is defined
-    - kolla_action != "config"
   listen: Restart neutron-l3-agent container
 
 - name: Restart running neutron-l3-agent container
@@ -138,18 +159,19 @@
     service_name: "neutron-l3-agent"
     service: "{{ neutron_services[service_name] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     action: "recreate_or_restart_container"
     common_options: "{{ docker_common_options }}"
     name: "{{ service.container_name }}"
     image: "{{ service.image }}"
-    environment: "{{ service.environment }}"
+    environment: "{{ service.environment | default(omit) }}"
     volumes: "{{ service.volumes | reject('equalto', '') | list }}"
     dimensions: "{{ service.dimensions }}"
     privileged: "{{ service.privileged | default(False) }}"
     healthcheck: "{{ service.healthcheck | default(omit) }}"
+    pid_mode: "{{ service.pid_mode | default(omit) }}"
+    cgroupns_mode: "{{ service.cgroupns_mode | default(omit) }}"
   when:
-    - kolla_action != "config"
     - inventory_hostname == item
   loop: "{{ groups['neutron_l3_agent_running_True'] | default([]) }}"
   loop_control:
@@ -161,7 +183,7 @@
     service_name: "neutron-sriov-agent"
     service: "{{ neutron_services[service_name] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     action: "recreate_or_restart_container"
     common_options: "{{ docker_common_options }}"
     name: "{{ service.container_name }}"
@@ -170,15 +192,13 @@
     dimensions: "{{ service.dimensions }}"
     privileged: "{{ service.privileged | default(False) }}"
     healthcheck: "{{ service.healthcheck | default(omit) }}"
-  when:
-    - kolla_action != "config"
 
 - name: Restart neutron-mlnx-agent container
   vars:
     service_name: "neutron-mlnx-agent"
     service: "{{ neutron_services[service_name] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     action: "recreate_or_restart_container"
     common_options: "{{ docker_common_options }}"
     name: "{{ service.container_name }}"
@@ -186,15 +206,13 @@
     volumes: "{{ service.volumes | reject('equalto', '') | list }}"
     dimensions: "{{ service.dimensions }}"
     privileged: "{{ service.privileged | default(False) }}"
-  when:
-    - kolla_action != "config"
 
 - name: Restart neutron-eswitchd container
   vars:
     service_name: "neutron-eswitchd"
     service: "{{ neutron_services[service_name] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     action: "recreate_or_restart_container"
     common_options: "{{ docker_common_options }}"
     name: "{{ service.container_name }}"
@@ -202,31 +220,13 @@
     volumes: "{{ service.volumes | reject('equalto', '') | list }}"
     dimensions: "{{ service.dimensions }}"
     privileged: "{{ service.privileged | default(False) }}"
-  when:
-    - kolla_action != "config"
-
-- name: Restart neutron-tls-proxy container
-  vars:
-    service_name: "neutron-tls-proxy"
-    service: "{{ neutron_services[service_name] }}"
-  become: true
-  kolla_docker:
-    action: "recreate_or_restart_container"
-    common_options: "{{ docker_common_options }}"
-    name: "{{ service.container_name }}"
-    image: "{{ service.image }}"
-    volumes: "{{ service.volumes | reject('equalto', '') | list }}"
-    dimensions: "{{ service.dimensions }}"
-    healthcheck: "{{ service.healthcheck | default(omit) }}"
-  when:
-    - kolla_action != "config"
 
 - name: Restart neutron-metadata-agent container
   vars:
     service_name: "neutron-metadata-agent"
     service: "{{ neutron_services[service_name] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     action: "recreate_or_restart_container"
     common_options: "{{ docker_common_options }}"
     name: "{{ service.container_name }}"
@@ -235,15 +235,13 @@
     dimensions: "{{ service.dimensions }}"
     privileged: "{{ service.privileged | default(False) }}"
     healthcheck: "{{ service.healthcheck | default(omit) }}"
-  when:
-    - kolla_action != "config"
 
 - name: Restart neutron-ovn-metadata-agent container
   vars:
     service_name: "neutron-ovn-metadata-agent"
     service: "{{ neutron_services[service_name] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     action: "recreate_or_restart_container"
     common_options: "{{ docker_common_options }}"
     name: "{{ service.container_name }}"
@@ -252,15 +250,16 @@
     dimensions: "{{ service.dimensions }}"
     privileged: "{{ service.privileged | default(False) }}"
     healthcheck: "{{ service.healthcheck | default(omit) }}"
-  when:
-    - kolla_action != "config"
+    pid_mode: "{{ service.pid_mode | default(omit) }}"
+    cgroupns_mode: "{{ service.cgroupns_mode | default(omit) }}"
+    environment: "{{ service.environment | default(omit) }}"
 
 - name: Restart neutron-bgp-dragent container
   vars:
     service_name: "neutron-bgp-dragent"
     service: "{{ neutron_services[service_name] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     action: "recreate_or_restart_container"
     common_options: "{{ docker_common_options }}"
     name: "{{ service.container_name }}"
@@ -269,32 +268,13 @@
     dimensions: "{{ service.dimensions }}"
     privileged: "{{ service.privileged | default(False) }}"
     healthcheck: "{{ service.healthcheck | default(omit) }}"
-  when:
-    - kolla_action != "config"
-
-- name: Restart neutron-infoblox-ipam-agent container
-  vars:
-    service_name: "neutron-infoblox-ipam-agent"
-    service: "{{ neutron_services[service_name] }}"
-  become: true
-  kolla_docker:
-    action: "recreate_or_restart_container"
-    common_options: "{{ docker_common_options }}"
-    name: "{{ service.container_name }}"
-    image: "{{ service.image }}"
-    volumes: "{{ service.volumes }}"
-    dimensions: "{{ service.dimensions }}"
-    privileged: "{{ service.privileged | default(False) }}"
-    healthcheck: "{{ service.healthcheck | default(omit) }}"
-  when:
-    - kolla_action != "config"
 
 - name: Restart neutron-metering-agent container
   vars:
     service_name: "neutron-metering-agent"
     service: "{{ neutron_services[service_name] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     action: "recreate_or_restart_container"
     common_options: "{{ docker_common_options }}"
     name: "{{ service.container_name }}"
@@ -303,15 +283,13 @@
     dimensions: "{{ service.dimensions }}"
     privileged: "{{ service.privileged | default(False) }}"
     healthcheck: "{{ service.healthcheck | default(omit) }}"
-  when:
-    - kolla_action != "config"
 
 - name: Restart ironic-neutron-agent container
   vars:
     service_name: "ironic-neutron-agent"
     service: "{{ neutron_services[service_name] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     action: "recreate_or_restart_container"
     common_options: "{{ docker_common_options }}"
     name: "{{ service.container_name }}"
@@ -320,15 +298,13 @@
     dimensions: "{{ service.dimensions }}"
     privileged: "{{ service.privileged | default(False) }}"
     healthcheck: "{{ service.healthcheck | default(omit) }}"
-  when:
-    - kolla_action != "config"
 
 - name: Restart neutron-ovn-agent container
   vars:
     service_name: "neutron-ovn-agent"
     service: "{{ neutron_services[service_name] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     action: "recreate_or_restart_container"
     common_options: "{{ docker_common_options }}"
     name: "{{ service.container_name }}"
@@ -337,5 +313,24 @@
     dimensions: "{{ service.dimensions }}"
     privileged: "{{ service.privileged | default(False) }}"
     healthcheck: "{{ service.healthcheck | default(omit) }}"
-  when:
-    - kolla_action != "config"
+
+- name: Restart neutron-ovn-vpn-agent container
+  vars:
+    service_name: "neutron-ovn-vpn-agent"
+    service: "{{ neutron_services[service_name] }}"
+  become: true
+  kolla_container:
+    action: "recreate_or_restart_container"
+    common_options: "{{ docker_common_options }}"
+    environment: "{{ service.environment | default(omit) }}"
+    name: "{{ service.container_name }}"
+    image: "{{ service.image }}"
+    user: "{{ service.user | default(omit) }}"
+    cap_add: "{{ service.cap_add | default(omit) }}"
+    security_opt: "{{ service.security_opt | default(omit) }}"
+    pid_mode: "{{ service.pid_mode | default(omit) }}"
+    cgroupns_mode: "{{ service.cgroupns_mode | default(omit) }}"
+    volumes: "{{ service.volumes }}"
+    dimensions: "{{ service.dimensions }}"
+    privileged: "{{ service.privileged | default(False) }}"
+    healthcheck: "{{ service.healthcheck | default(omit) }}"

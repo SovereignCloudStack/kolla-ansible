@@ -6,6 +6,8 @@ debug = {{ nova_logging_debug }}
 log_file = /var/log/kolla/nova/nova-super-conductor.log
 {% elif service_name == "nova-api"  %}
 log_file = /var/log/kolla/nova/nova-api.log
+{% elif service_name == "nova-metadata" %}
+log_file = /var/log/kolla/nova/nova-metadata.log
 {% else %}
 log_dir = /var/log/kolla/nova
 {% endif %}
@@ -16,8 +18,8 @@ allow_resize_to_same_host = true
 # Though my_ip is not used directly, lots of other variables use $my_ip
 my_ip = {{ api_interface_address }}
 
-{% if enable_ceilometer | bool or enable_designate | bool %}
-instance_usage_audit = True
+{% if enable_ceilometer | bool %}
+instance_usage_audit = true
 instance_usage_audit_period = hour
 {% endif %}
 
@@ -35,13 +37,11 @@ enabled_filters = ComputeFilter,ComputeCapabilitiesFilter,ImagePropertiesFilter
 {% if enable_cells | bool %}
 # When in superconductor mode, nova-compute can't send instance
 # info updates to the scheduler, so just disable it.
-track_instance_changes = False
+track_instance_changes = false
 {% endif %}
 
-[api]
-use_forwarded_for = true
-
 {% if vendordata_file_path is defined %}
+[api]
 vendordata_jsonfile_path = /etc/nova/vendordata.json
 {% endif %}
 
@@ -50,7 +50,7 @@ vendordata_jsonfile_path = /etc/nova/vendordata.json
 workers = {{ nova_superconductor_workers }}
 
 [oslo_middleware]
-enable_proxy_headers_parsing = True
+enable_proxy_headers_parsing = true
 
 [oslo_concurrency]
 lock_path = /var/lib/nova/tmp
@@ -64,7 +64,7 @@ debug = {{ nova_logging_debug }}
 
 {% if enable_cinder | bool %}
 [cinder]
-catalog_info = volumev3:cinderv3:internalURL
+catalog_info = block-storage::internalURL
 os_region_name = {{ openstack_region_name }}
 auth_url = {{ keystone_internal_url }}
 auth_type = password
@@ -91,27 +91,27 @@ valid_interfaces = internal
 cafile = {{ openstack_cacert }}
 
 [database]
-connection = mysql+pymysql://{{ nova_cell0_database_user }}:{{ nova_cell0_database_password }}@{{ nova_cell0_database_address }}/{{ nova_cell0_database_name }}
+connection = mysql+pymysql://{{ nova_cell0_database_user }}:{{ nova_cell0_database_password }}@{{ nova_cell0_database_address }}/{{ nova_cell0_database_name }}{{ '?ssl_ca=' ~ openstack_cacert if nova_database_enable_tls_internal | bool }}
 connection_recycle_time = {{ database_connection_recycle_time }}
 max_overflow = 1000
 max_pool_size = {{ database_max_pool_size }}
 max_retries = -1
 
 [api_database]
-connection = mysql+pymysql://{{ nova_api_database_user }}:{{ nova_api_database_password }}@{{ nova_api_database_address }}/{{ nova_api_database_name }}
+connection = mysql+pymysql://{{ nova_api_database_user }}:{{ nova_api_database_password }}@{{ nova_api_database_address }}/{{ nova_api_database_name }}{{ '?ssl_ca=' ~ openstack_cacert if nova_database_enable_tls_internal | bool }}
 connection_recycle_time = {{ database_connection_recycle_time }}
 max_pool_size = {{ database_max_pool_size }}
 max_retries = -1
 
 [cache]
 backend = oslo_cache.memcache_pool
-enabled = True
+enabled = true
 memcache_servers = {% for host in groups['memcached'] %}{{ 'api' | kolla_address(host) | put_address_in_context('memcache') }}:{{ memcached_port }}{% if not loop.last %},{% endif %}{% endfor %}
 
 
 [keystone_authtoken]
 service_type = compute
-www_authenticate_uri = {{ keystone_internal_url }}
+www_authenticate_uri = {{ keystone_public_url }}
 auth_url = {{ keystone_internal_url }}
 auth_type = password
 project_domain_id = {{ default_project_domain_id }}
@@ -122,7 +122,7 @@ password = {{ nova_keystone_password }}
 cafile = {{ openstack_cacert }}
 region_name = {{ openstack_region_name }}
 
-memcache_security_strategy = ENCRYPT
+memcache_security_strategy = {{ memcache_security_strategy }}
 memcache_secret_key = {{ memcache_secret_key }}
 memcached_servers = {% for host in groups['memcached'] %}{{ 'api' | kolla_address(host) | put_address_in_context('memcache') }}:{{ memcached_port }}{% if not loop.last %},{% endif %}{% endfor %}
 
@@ -139,16 +139,23 @@ driver = noop
 {% endif %}
 
 [oslo_messaging_rabbit]
+use_queue_manager = true
+{% if service_name == 'nova-api' or service_name == 'nova-metadata' %}
+processname = {{ service_name }}
+{% endif %}
 heartbeat_in_pthread = {{ service_name == 'nova-api' }}
 {% if om_enable_rabbitmq_tls | bool %}
 ssl = true
 ssl_ca_file = {{ om_rabbitmq_cacert }}
 {% endif %}
-{% if om_enable_rabbitmq_high_availability | bool %}
-amqp_durable_queues = true
+rabbit_quorum_queue = true
+{% if om_enable_rabbitmq_stream_fanout | bool %}
+rabbit_stream_fanout = true
+rabbit_qos_prefetch_count = {{ om_rabbitmq_qos_prefetch_count }}
 {% endif %}
+rabbit_transient_quorum_queue = true
 
-{% if service_name in nova_services_require_policy_json and nova_policy_file is defined %}
+{% if service_name in nova_services_require_policy_yaml and nova_policy_file is defined %}
 [oslo_policy]
 policy_file = {{ nova_policy_file }}
 {% endif %}
@@ -161,9 +168,6 @@ debug = {{ nova_logging_debug }}
 
 [wsgi]
 api_paste_config = /etc/nova/api-paste.ini
-{% if kolla_enable_tls_external | bool or kolla_enable_tls_internal | bool %}
-secure_proxy_ssl_header = HTTP_X_FORWARDED_PROTO
-{% endif %}
 
 [scheduler]
 max_attempts = 10
@@ -186,7 +190,7 @@ cafile = {{ openstack_cacert }}
 valid_interfaces = internal
 
 [notifications]
-{% if enable_ceilometer | bool or enable_designate | bool or enable_neutron_infoblox_ipam_agent | bool %}
+{% if enable_ceilometer | bool or enable_designate | bool %}
 notify_on_state_change = vm_and_task_state
 {% endif %}
 

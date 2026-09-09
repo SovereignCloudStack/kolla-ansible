@@ -7,14 +7,24 @@
             "owner": "neutron",
             "perm": "0600"
         },
-{% if check_extra_ml2_plugins is defined and check_extra_ml2_plugins.matched > 0 %}{% for plugin in check_extra_ml2_plugins.files %}
+{% if enable_neutron_taas | bool %}
+        {
+            "source": "{{ container_config_directory }}/neutron_taas.conf",
+            "dest": "/etc/neutron/neutron_taas.conf",
+            "owner": "neutron",
+            "perm": "0600"
+        },
+{% endif %}
+{% if check_extra_ml2_plugins is defined and check_extra_ml2_plugins.matched > 0 %}
+{%     for plugin in check_extra_ml2_plugins.files %}
         {
             "source": "{{ container_config_directory }}/{{ plugin.path | basename }}",
             "dest": "/etc/neutron/plugins/ml2/{{ plugin.path | basename }}",
             "owner": "neutron",
             "perm": "0600"
         },
-{% endfor %}{% endif %}
+{%     endfor %}
+{% endif %}
         {% if neutron_policy_file is defined %}{
             "source": "{{ container_config_directory }}/{{ neutron_policy_file }}",
             "dest": "/etc/neutron/{{ neutron_policy_file }}",
@@ -26,13 +36,31 @@
             "dest": "/etc/neutron/plugins/ml2/openvswitch_agent.ini",
             "owner": "neutron",
             "perm": "0600"
+        }{% if kolla_copy_ca_into_containers | bool %},
+        {
+            "source": "{{ container_config_directory }}/ca-certificates",
+            "dest": "/var/lib/kolla/share/ca-certificates",
+            "owner": "root",
+            "perm": "0644"
+        }{% endif %}
+    ],
+    "directories": [
+        {
+            "path": "/var/log/kolla",
+            "owner": "fluentd:kolla",
+            "perm": "2775"
+        },
+        {
+            "path": "/var/log/kolla/neutron",
+            "owner": "neutron:kolla",
+            "perm": "2775"
         }
     ],
     "permissions": [
         {
-            "path": "/var/log/kolla/neutron",
-            "owner": "neutron:neutron",
-            "recurse": true
+            "path": "/var/log/kolla/neutron/*.log",
+            "owner": "neutron:kolla",
+            "perm": "0664"
         }
     ]
 }

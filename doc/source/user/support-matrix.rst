@@ -7,24 +7,9 @@ Supported Operating Systems
 
 Kolla Ansible supports the following host Operating Systems (OS):
 
-.. note::
-
-   CentOS Stream 8 is no longer supported as a host OS. The Yoga release
-   supports both CentOS Stream 8 and CentOS Stream 9 / Rocky Linux 9, and
-   provides a route for migration.
-
-.. note::
-
-   CentOS Stream 9 is supported as a host OS while Kolla does not publish CS9
-   based images. Users can build them on their own. We recommend using Rocky
-   Linux 9 images instead.
-
-* CentOS Stream 9
-* Debian Bullseye (11)
-* Debian Bookworm (12)
-* openEuler 22.03 LTS
-* Rocky Linux 9
-* Ubuntu Jammy (22.04)
+* Debian Trixie (13)
+* Rocky Linux 10
+* Ubuntu Noble (24.04)
 
 Supported container images
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -32,7 +17,6 @@ Supported container images
 For best results, the base container image distribution should match the host
 OS distribution. The following values are supported for ``kolla_base_distro``:
 
-* ``centos``
 * ``debian``
 * ``rocky``
 * ``ubuntu``

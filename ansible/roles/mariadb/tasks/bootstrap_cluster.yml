@@ -4,10 +4,10 @@
     service_name: "mariadb"
     service: "{{ mariadb_services[service_name] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     action: "start_container"
     common_options: "{{ docker_common_options }}"
-    detach: False
+    detach: false
     environment:
       KOLLA_BOOTSTRAP:
       KOLLA_CONFIG_STRATEGY: "{{ config_strategy }}"
@@ -23,5 +23,5 @@
     - Bootstrap MariaDB cluster
 
 - name: Store bootstrap host name into facts
-  set_fact:
+  ansible.builtin.set_fact:
     bootstrap_host: "{{ inventory_hostname }}"

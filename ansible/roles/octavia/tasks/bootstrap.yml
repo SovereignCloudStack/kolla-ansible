@@ -5,12 +5,13 @@
     container_engine: "{{ kolla_container_engine }}"
     module_name: mysql_db
     module_args:
+      ca_cert: "{{ openstack_cacert if database_enable_tls_internal | bool else omit }}"
       login_host: "{{ database_address }}"
       login_port: "{{ database_port }}"
       login_user: "{{ octavia_database_shard_root_user }}"
       login_password: "{{ database_password }}"
       name: "{{ octavia_database_name }}"
-  run_once: True
+  run_once: true
   delegate_to: "{{ groups['octavia-api'][0] }}"
   when:
     - not use_preconfigured_databases | bool
@@ -21,12 +22,13 @@
     container_engine: "{{ kolla_container_engine }}"
     module_name: mysql_db
     module_args:
+      ca_cert: "{{ openstack_cacert if database_enable_tls_internal | bool else omit }}"
       login_host: "{{ database_address }}"
       login_port: "{{ database_port }}"
       login_user: "{{ octavia_persistence_database_shard_root_user }}"
       login_password: "{{ database_password }}"
       name: "{{ octavia_persistence_database_name }}"
-  run_once: True
+  run_once: true
   delegate_to: "{{ groups['octavia-api'][0] }}"
   when:
     - not use_preconfigured_databases | bool
@@ -37,6 +39,7 @@
     container_engine: "{{ kolla_container_engine }}"
     module_name: mysql_user
     module_args:
+      ca_cert: "{{ openstack_cacert if database_enable_tls_internal | bool else omit }}"
       login_host: "{{ database_address }}"
       login_port: "{{ database_port }}"
       login_user: "{{ octavia_database_shard_root_user }}"
@@ -46,7 +49,7 @@
       host: "%"
       priv: "{{ octavia_database_name }}.*:ALL"
       append_privs: "yes"
-  run_once: True
+  run_once: true
   delegate_to: "{{ groups['octavia-api'][0] }}"
   when:
     - not use_preconfigured_databases | bool
@@ -57,6 +60,7 @@
     container_engine: "{{ kolla_container_engine }}"
     module_name: mysql_user
     module_args:
+      ca_cert: "{{ openstack_cacert if database_enable_tls_internal | bool else omit }}"
       login_host: "{{ database_address }}"
       login_port: "{{ database_port }}"
       login_user: "{{ octavia_persistence_database_shard_root_user }}"
@@ -66,9 +70,10 @@
       host: "%"
       priv: "{{ octavia_persistence_database_name }}.*:ALL"
       append_privs: "yes"
-  run_once: True
+  run_once: true
   delegate_to: "{{ groups['octavia-api'][0] }}"
   when:
     - not use_preconfigured_databases | bool
 
-- import_tasks: bootstrap_service.yml
+- name: Run octavia bootstrap container
+  ansible.builtin.import_tasks: bootstrap_service.yml

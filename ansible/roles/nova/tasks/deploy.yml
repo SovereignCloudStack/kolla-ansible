@@ -1,9 +1,12 @@
 ---
-- import_tasks: register.yml
+- name: Register nova in Keystone
+  ansible.builtin.import_tasks: register.yml
 
-- import_tasks: config.yml
+- name: Configure nova
+  ansible.builtin.import_tasks: config.yml
 
-- import_tasks: check-containers.yml
+- name: Check nova containers
+  ansible.builtin.import_tasks: check-containers.yml
 
 - name: Flush handlers
-  meta: flush_handlers
+  ansible.builtin.meta: flush_handlers

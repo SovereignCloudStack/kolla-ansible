@@ -1,6 +1,6 @@
 ---
 - name: Fail if nova_libvirt container is enabled
-  fail:
+  ansible.builtin.fail:
     msg: >-
       The nova_libvirt container has not been cleaned up because it is enabled.
       It may be disabled by setting enable_nova_libvirt_container to false.
@@ -9,16 +9,20 @@
 - name: Get container facts
   become: true
   kolla_container_facts:
+    action: get_containers
     container_engine: "{{ kolla_container_engine }}"
     name:
       - nova_libvirt
   register: container_facts
 
-- block:
+- name: Check and stop nova_libvirt container
+  when: container_facts.containers['nova_libvirt'] is defined
+  block:
     # NOTE(mgoddard): pgrep exit status 1 means no match.
     - name: Check if there are any running VMs
       become: true
-      shell:
+      changed_when: false
+      ansible.builtin.shell:
         cmd: >
           set -o pipefail &&
           { pgrep -l qemu || test $? = 1; } | awk '!/qemu-ga/  && !/qemu-img/ {print $1}'
@@ -26,7 +30,7 @@
       register: running_vms
 
     - name: Fail if there are any running VMs
-      fail:
+      ansible.builtin.fail:
         msg: >-
           Refusing to remove nova_libvirt container with running VMs:
           {{ running_vms.stdout }}
@@ -36,15 +40,14 @@
 
     - name: Stop and remove nova_libvirt container
       become: true
-      kolla_docker:
+      kolla_container:
         common_options: "{{ docker_common_options }}"
         action: "stop_and_remove_container"
         name: nova_libvirt
-  when: container_facts['nova_libvirt'] is defined
 
 - name: Remove nova_libvirt Docker volumes
   become: true
-  kolla_docker:
+  kolla_container:
     common_options: "{{ docker_common_options }}"
     action: "remove_volume"
     name: "{{ item }}"
@@ -56,30 +59,31 @@
 
 - name: Remove config for nova_libvirt
   become: true
-  file:
+  ansible.builtin.file:
     path: "{{ node_config_directory }}/nova-libvirt"
     state: "absent"
 
 # Revert the changes applied in config-host.yml.
-- block:
+- name: Revert host libvirt configuration changes
+  when:
+    - nova_compute_virt_type == 'kvm'
+  block:
     - name: Remove udev kolla kvm rules
       become: true
-      file:
+      ansible.builtin.file:
         path: "/etc/udev/rules.d/99-kolla-kvm.rules"
         state: absent
 
     - name: Reset /dev/kvm ownership
       become: true
-      file:
+      ansible.builtin.file:
         path: /dev/kvm
         group: kvm
 
     - name: Unmask qemu-kvm service
       become: true
-      systemd:
+      ansible.builtin.systemd:
         name: qemu-kvm.service
         masked: false
       when:
         - ansible_facts.distribution == 'Ubuntu'
-  when:
-    - nova_compute_virt_type == 'kvm'

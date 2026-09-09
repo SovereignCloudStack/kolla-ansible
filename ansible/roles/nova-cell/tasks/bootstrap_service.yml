@@ -3,10 +3,10 @@
   become: true
   vars:
     nova_conductor: "{{ nova_cell_services['nova-conductor'] }}"
-  kolla_docker:
+  kolla_container:
     action: "start_container"
     common_options: "{{ docker_common_options }}"
-    detach: False
+    detach: false
     environment:
       KOLLA_UPGRADE:
       KOLLA_CONFIG_STRATEGY: "{{ config_strategy }}"

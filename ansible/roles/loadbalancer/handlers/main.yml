@@ -1,10 +1,4 @@
 ---
-- name: Reload firewalld
-  become: True
-  service:
-    name: "firewalld"
-    state: reloaded
-
 # NOTE(yoctozepto): this handler dance is to ensure we delay restarting master
 # keepalived and haproxy which control VIP address until we have working backups.
 # This could be improved by checking if backup keepalived do not report FAULT state.
@@ -16,7 +10,7 @@
   vars:
     version: "{{ '6' if api_address_family == 'ipv6' else '4' }}"
   become: true
-  command: ip -{{ version }} -o addr show dev {{ api_interface }}
+  ansible.builtin.command: ip -{{ version }} -o addr show dev {{ api_interface }}
   register: ip_addr_output
   changed_when: false
   when:
@@ -29,7 +23,7 @@
 - name: Group HA nodes by status
   vars:
     re_safe_address: "{{ kolla_internal_vip_address | regex_escape }}"
-  group_by:
+  ansible.builtin.group_by:
     key: kolla_ha_is_master_{{ ip_addr_output.stdout is regex('\b' + re_safe_address + '\b') }}
   changed_when: false
   when:
@@ -41,7 +35,7 @@
 
 - name: Stop backup keepalived container
   become: true
-  kolla_docker:
+  kolla_container:
     action: "stop_container"
     # NOTE(yoctozepto): backup node might not have keepalived yet - ignore
     ignore_missing: true
@@ -59,7 +53,7 @@
 
 - name: Stop backup haproxy container
   become: true
-  kolla_docker:
+  kolla_container:
     action: "stop_container"
     # NOTE(kevko): backup node might not have haproxy yet - ignore
     ignore_missing: true
@@ -75,7 +69,7 @@
 
 - name: Stop backup proxysql container
   become: true
-  kolla_docker:
+  kolla_container:
     action: "stop_container"
     # NOTE(kevko): backup node might not have proxysql yet - ignore
     ignore_missing: true
@@ -98,7 +92,7 @@
     service_name: "haproxy"
     service: "{{ loadbalancer_services[service_name] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     action: "recreate_or_restart_container"
     common_options: "{{ docker_common_options }}"
     name: "{{ service.container_name }}"
@@ -119,16 +113,17 @@
     - Wait for backup haproxy to start
 
 - name: Wait for backup haproxy to start
-  wait_for:
+  ansible.builtin.wait_for:
     host: "{{ api_interface_address }}"
     port: "{{ haproxy_monitor_port }}"
+  any_errors_fatal: true
 
 - name: Start backup proxysql container
   vars:
     service_name: "proxysql"
     service: "{{ loadbalancer_services[service_name] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     action: "recreate_or_restart_container"
     common_options: "{{ docker_common_options }}"
     name: "{{ service.container_name }}"
@@ -153,16 +148,17 @@
     - Wait for backup proxysql to start
 
 - name: Wait for backup proxysql to start
-  wait_for:
+  ansible.builtin.wait_for:
     host: "{{ api_interface_address }}"
     port: "{{ proxysql_admin_port }}"
+  any_errors_fatal: true
 
 - name: Start backup keepalived container
   vars:
     service_name: "keepalived"
     service: "{{ loadbalancer_services[service_name] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     action: "recreate_or_restart_container"
     common_options: "{{ docker_common_options }}"
     name: "{{ service.container_name }}"
@@ -184,7 +180,7 @@
 # to the VIP address.
 - name: Stop master haproxy container
   become: true
-  kolla_docker:
+  kolla_container:
     action: "stop_container"
     # NOTE(yoctozepto): master node might not have haproxy yet - ignore
     ignore_missing: true
@@ -200,7 +196,7 @@
 
 - name: Stop master proxysql container
   become: true
-  kolla_docker:
+  kolla_container:
     action: "stop_container"
     common_options: "{{ docker_common_options }}"
     name: "proxysql"
@@ -215,7 +211,7 @@
 
 - name: Stop master keepalived container
   become: true
-  kolla_docker:
+  kolla_container:
     action: "stop_container"
     common_options: "{{ docker_common_options }}"
     name: "keepalived"
@@ -232,7 +228,7 @@
     service_name: "haproxy"
     service: "{{ loadbalancer_services[service_name] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     action: "recreate_or_restart_container"
     common_options: "{{ docker_common_options }}"
     name: "{{ service.container_name }}"
@@ -253,7 +249,7 @@
     - Wait for master haproxy to start
 
 - name: Wait for master haproxy to start
-  wait_for:
+  ansible.builtin.wait_for:
     host: "{{ api_interface_address }}"
     port: "{{ haproxy_monitor_port }}"
 
@@ -262,7 +258,7 @@
     service_name: "proxysql"
     service: "{{ loadbalancer_services[service_name] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     action: "recreate_or_restart_container"
     common_options: "{{ docker_common_options }}"
     name: "{{ service.container_name }}"
@@ -283,7 +279,7 @@
     - Wait for master proxysql to start
 
 - name: Wait for master proxysql to start
-  wait_for:
+  ansible.builtin.wait_for:
     host: "{{ api_interface_address }}"
     port: "{{ proxysql_admin_port }}"
 
@@ -292,7 +288,7 @@
     service_name: "keepalived"
     service: "{{ loadbalancer_services[service_name] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     action: "recreate_or_restart_container"
     common_options: "{{ docker_common_options }}"
     name: "{{ service.container_name }}"
@@ -314,7 +310,7 @@
   vars:
     service_name: "haproxy"
     service: "{{ loadbalancer_services[service_name] }}"
-  wait_for:
+  ansible.builtin.wait_for:
     host: "{{ kolla_internal_vip_address }}"
     port: "{{ haproxy_monitor_port }}"
   when:
@@ -326,7 +322,7 @@
   vars:
     service_name: "proxysql"
     service: "{{ loadbalancer_services[service_name] }}"
-  wait_for:
+  ansible.builtin.wait_for:
     host: "{{ kolla_internal_vip_address }}"
     port: "{{ proxysql_admin_port }}"
   when:
@@ -339,7 +335,7 @@
     service_name: "haproxy-ssh"
     service: "{{ loadbalancer_services[service_name] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     action: "recreate_or_restart_container"
     common_options: "{{ docker_common_options }}"
     name: "{{ service.container_name }}"

@@ -48,7 +48,7 @@ Debugging Kolla
 ~~~~~~~~~~~~~~~
 
 The status of containers after deployment can be determined on the deployment
-targets by executing:
+targets by executing (use `podman` instead of `docker` if applicable):
 
 .. code-block:: console
 
@@ -76,8 +76,10 @@ If the stdout logs are needed, please run:
 Note that most of the containers don't log to stdout so the above command will
 provide no information.
 
-To learn more about Docker command line operation please refer to `Docker
-documentation <https://docs.docker.com/reference/>`__.
+To learn more about container engine command line operation, please refer
+to the `Docker
+documentation <https://docs.docker.com/reference/>`__ or the `Podman
+documentation <https://docs.podman.io/en/stable/Commands.html>`__.
 
 The log volume "kolla_logs" is linked to ``/var/log/kolla`` on the host.
 You can find all kolla logs in there.
@@ -88,13 +90,13 @@ You can find all kolla logs in there.
    /var/lib/docker/volumes/kolla_logs/_data
 
 When ``enable_central_logging`` is enabled, to view the logs in a web browser
-using Kibana, go to
-``http://<kolla_internal_vip_address>:<kibana_server_port>`` or
-``http://<kolla_external_vip_address>:<kibana_server_port>``. Authenticate
-using ``<kibana_user>`` and ``<kibana_password>``.
+using OpenSearch Dashboards, go to
+``http://<kolla_internal_vip_address>:<opensearch_dashboards_port>`` or
+``http://<kolla_external_vip_address>:<opensearch_dashboards_port>``. Authenticate
+using ``opensearch`` and ``<opensearch_dashboards_password>``.
 
 The values ``<kolla_internal_vip_address>``, ``<kolla_external_vip_address>``
-``<kibana_server_port>`` and ``<kibana_user>`` can be found in
-``<kolla_install_path>/kolla/ansible/group_vars/all.yml`` or if the default
-values are overridden, in ``/etc/kolla/globals.yml``. The value of
-``<kibana_password>`` can be found in ``/etc/kolla/passwords.yml``.
+``<opensearch_dashboards_port>`` can be found in
+``<kolla_install_path>/kolla/ansible/group_vars/all/opensearch.yml``. The value
+of ``<opensearch_dashboards_password>`` can be found in
+``/etc/kolla/passwords.yml``.

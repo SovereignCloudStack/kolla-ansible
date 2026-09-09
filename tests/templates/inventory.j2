@@ -6,14 +6,14 @@
 # primary and secondary while the parent group (control) uses only primary.
 
 [control]
-{% if scenario == 'masakari' %}
-{% for host in hostvars if host in ['primary'] %}
+{% if scenario in ['masakari', 'multi-compute-ironic'] %}
+{%     for host in hostvars if host in ['primary'] %}
 {{ host }} ansible_host={{ hostvars[host]['ansible_host'] }}
-{% endfor %}
+{%     endfor %}
 {% else %}
-{% for host in hostvars %}
+{%     for host in hostvars | reject('equalto', 'localhost') %}
 {{ host }} ansible_host={{ hostvars[host]['ansible_host'] }}
-{% endfor %}
+{%     endfor %}
 {% endif %}
 
 [network:children]
@@ -27,33 +27,33 @@ control
 
 [compute]
 {% if scenario == 'masakari' %}
-{% for host in hostvars if host in ['ternary1', 'ternary2'] %}
+{%     for host in hostvars if host in ['ternary1', 'ternary2'] %}
 {{ host }} ansible_host={{ hostvars[host]['ansible_host'] }}
-{% endfor %}
+{%     endfor %}
 {% else %}
-{% for host in hostvars %}
+{%     for host in hostvars | reject('equalto', 'localhost') %}
 {{ host }} ansible_host={{ hostvars[host]['ansible_host'] }}
-{% endfor %}
+{%     endfor %}
 {% endif %}
 
 [storage]
-{% for host in hostvars %}
+{% for host in hostvars | reject('equalto', 'localhost') %}
 {{ host }} ansible_host={{ hostvars[host]['ansible_host'] }}
 {% endfor %}
 
 [monitoring]
-{% for host in hostvars %}
+{% for host in hostvars | reject('equalto', 'localhost') %}
 {{ host }} ansible_host={{ hostvars[host]['ansible_host'] }}
 {% endfor %}
 
 [deployment]
-{% for host in hostvars %}
+{% for host in hostvars | reject('equalto', 'localhost') %}
 {{ host }} ansible_host={{ hostvars[host]['ansible_host'] }}
 {% endfor %}
 
 {% if scenario == 'cells' %}
-{% for host in hostvars %}
-{% set cell_name = 'cell' ~ loop.index %}
+{%     for host in hostvars | reject('equalto', 'localhost') %}
+{%         set cell_name = 'cell' ~ loop.index %}
 [{{ cell_name }}]
 {{ host }} ansible_host={{ hostvars[host]['ansible_host'] }} mariadb_shard_id={{ loop.index0 % 2 }}
 
@@ -65,7 +65,7 @@ nova_cell_novncproxy_group = {{ cell_name }}
 nova_novncproxy_port = {{ 6080 + loop.index0 }}
 nova_cell_database_shard_id = {{ loop.index0 % 2 }}
 
-{% endfor %}
+{%     endfor %}
 {% endif %}
 
 [baremetal:children]
@@ -97,10 +97,6 @@ monitoring
 [etcd:children]
 control
 
-[influxdb]
-# NOTE(dszumski): This doesn't support clustering
-primary
-
 [prometheus:children]
 monitoring
 
@@ -123,10 +119,10 @@ storage
 # In CI we want Pacemaker to run on primary and secondary (to test with HA).
 
 [hacluster]
-{% for host in hostvars %}
-{% if host in ['primary', 'secondary'] %}
+{% for host in hostvars | reject('equalto', 'localhost') %}
+{%     if host in ['primary', 'secondary'] %}
 {{ host }} ansible_host={{ hostvars[host]['ansible_host'] }}
-{% endif %}
+{%     endif %}
 {% endfor %}
 
 [hacluster-remote:children]
@@ -139,9 +135,6 @@ network
 control
 
 [rabbitmq:children]
-control
-
-[outward-rabbitmq:children]
 control
 
 [keystone:children]
@@ -167,16 +160,10 @@ control
 [cloudkitty:children]
 control
 
-[freezer:children]
-control
-
 [memcached:children]
 control
 
 [horizon:children]
-control
-
-[swift:children]
 control
 
 [barbican:children]
@@ -185,19 +172,10 @@ control
 [heat:children]
 control
 
-[murano:children]
-control
-
-[solum:children]
-control
-
 [ironic:children]
 control
 
 [magnum:children]
-control
-
-[sahara:children]
 control
 
 [mistral:children]
@@ -225,12 +203,6 @@ control
 [trove:children]
 control
 
-[senlin:children]
-control
-
-[vitrage:children]
-control
-
 [watcher:children]
 control
 
@@ -246,17 +218,11 @@ control
 [bifrost:children]
 deployment
 
-[zun:children]
-control
-
-[redis:children]
+[valkey:children]
 control
 
 [blazar:children]
 control
-
-[venus:children]
-monitoring
 
 [letsencrypt:children]
 loadbalancer
@@ -278,10 +244,19 @@ common
 [fluentd:children]
 common
 
+{# TODO(mnasiadka) Remove in 2027.2 (after next SLURP) #}
+{% if is_upgrade | bool %}
 [kolla-logs:children]
 common
 
 [kolla-toolbox:children]
+common
+{% endif %}
+
+[kolla_logs:children]
+common
+
+[kolla_toolbox:children]
 common
 
 [opensearch:children]
@@ -302,6 +277,9 @@ nova
 [nova-conductor:children]
 nova
 
+[nova-metadata:children]
+nova
+
 [nova-super-conductor:children]
 nova
 
@@ -314,18 +292,44 @@ nova
 [nova-spicehtml5proxy:children]
 nova
 
+{% if scenario == 'multi-compute-ironic' %}
+[nova-compute-ironic-1]
+primary
+[nova-compute-ironic-2]
+secondary1
+[nova-compute-ironic-3]
+secondary2
+[nova-compute-ironic-4]
+secondary2
+
+[nova-compute-ironic:children]
+nova-compute-ironic-1
+nova-compute-ironic-2
+nova-compute-ironic-3
+nova-compute-ironic-4
+{% else %}
 [nova-compute-ironic:children]
 nova
+{% endif %}
 
 [nova-serialproxy:children]
 nova
 
 # Neutron
-[neutron-server:children]
-control
+[ironic-neutron-agent:children]
+neutron
+
+[neutron-bgp-dragent:children]
+neutron
 
 [neutron-dhcp-agent:children]
 neutron
+
+{# NOTE(mnasiadka): Remove me after 2026.2 release #}
+{% if is_upgrade %}
+[neutron-infoblox-ipam-agent:children]
+neutron
+{% endif %}
 
 [neutron-l3-agent:children]
 neutron
@@ -333,38 +337,61 @@ neutron
 [neutron-metadata-agent:children]
 neutron
 
-[neutron-ovn-metadata-agent:children]
-compute
-network
-
-[neutron-bgp-dragent:children]
-neutron
-
-[neutron-infoblox-ipam-agent:children]
-neutron
-
 [neutron-metering-agent:children]
 neutron
 
-[ironic-neutron-agent:children]
-neutron
+[neutron-periodic-worker:children]
+control
+
+[neutron-rpc-server:children]
+control
+
+[neutron-server:children]
+control
 
 [neutron-ovn-agent:children]
 compute
 network
+
+[neutron-ovn-maintenance-worker:children]
+control
+
+[neutron-ovn-metadata-agent:children]
+compute
+network
+
+[neutron-ovn-vpn-agent:children]
+neutron
 
 # Cinder
 [cinder-api:children]
 cinder
 
 [cinder-backup:children]
+cinder
+
+[cinder-backup-lvm:children]
+storage
+
+[cinder-backup-multiple:children]
+cinder
 storage
 
 [cinder-scheduler:children]
 cinder
 
 [cinder-volume:children]
+cinder
+
+[cinder-volume-lvm:children]
 storage
+
+[cinder-volume-multiple:children]
+cinder
+storage
+
+[cinder-scheduler:children]
+cinder
 
 # Cloudkitty
 [cloudkitty-api:children]
@@ -372,13 +399,6 @@ cloudkitty
 
 [cloudkitty-processor:children]
 cloudkitty
-
-# Freezer
-[freezer-api:children]
-freezer
-
-[freezer-scheduler:children]
-freezer
 
 # iSCSI
 [iscsid:children]
@@ -402,19 +422,6 @@ network
 [manila-data:children]
 manila
 
-# Swift
-[swift-proxy-server:children]
-swift
-
-[swift-account-server:children]
-storage
-
-[swift-container-server:children]
-storage
-
-[swift-object-server:children]
-storage
-
 # Barbican
 [barbican-api:children]
 barbican
@@ -435,13 +442,6 @@ heat
 [heat-engine:children]
 heat
 
-# Murano
-[murano-api:children]
-murano
-
-[murano-engine:children]
-murano
-
 # Ironic
 [ironic-api:children]
 ironic
@@ -449,7 +449,13 @@ ironic
 [ironic-conductor:children]
 ironic
 
+{# NOTE(mnasiadka): Remove in Gazpacho/2026.1 release #}
+{% if is_upgrade | bool %}
 [ironic-inspector:children]
+ironic
+
+{% endif %}
+[ironic-dnsmasq:children]
 ironic
 
 [ironic-tftp:children]
@@ -464,32 +470,6 @@ magnum
 
 [magnum-conductor:children]
 magnum
-
-# Sahara
-[sahara-api:children]
-sahara
-
-[sahara-engine:children]
-sahara
-
-# Solum
-[solum-api:children]
-solum
-
-[solum-worker:children]
-solum
-
-[solum-deployer:children]
-solum
-
-[solum-conductor:children]
-solum
-
-[solum-application-deployment:children]
-solum
-
-[solum-image-builder:children]
-solum
 
 # Mistral
 [mistral-api:children]
@@ -575,19 +555,6 @@ watcher
 [watcher-applier:children]
 watcher
 
-# Senlin
-[senlin-api:children]
-senlin
-
-[senlin-conductor:children]
-senlin
-
-[senlin-engine:children]
-senlin
-
-[senlin-health-manager:children]
-senlin
-
 # Octavia
 [octavia-api:children]
 octavia
@@ -630,38 +597,12 @@ designate
 [placement-api:children]
 placement
 
-# Zun
-[zun-api:children]
-zun
-
-[zun-wsproxy:children]
-zun
-
-[zun-compute:children]
-compute
-
-[zun-cni-daemon:children]
-compute
-
 # Tacker
 [tacker-server:children]
 tacker
 
 [tacker-conductor:children]
 tacker
-
-# Vitrage
-[vitrage-api:children]
-vitrage
-
-[vitrage-notifier:children]
-vitrage
-
-[vitrage-graph:children]
-vitrage
-
-[vitrage-ml:children]
-vitrage
 
 # Blazar
 [blazar-api:children]
@@ -681,11 +622,11 @@ storage
 [prometheus-mysqld-exporter:children]
 mariadb
 
-[prometheus-haproxy-exporter:children]
-loadbalancer
-
 [prometheus-memcached-exporter:children]
 memcached
+
+[prometheus-valkey-exporter:children]
+valkey
 
 [prometheus-cadvisor:children]
 monitoring
@@ -709,8 +650,9 @@ monitoring
 [prometheus-libvirt-exporter:children]
 compute
 
-[prometheus-msteams:children]
-prometheus-alertmanager
+[prometheus-openstack-network-exporter:children]
+compute
+network
 
 # NOTE(yoctozepto): In CI we want to test Masakari HA but not of other services,
 # to conserve the resources. Hence, we set Masakari groups to use both
@@ -750,11 +692,8 @@ ovn-database
 [ovn-sb-db:children]
 ovn-database
 
-[venus-api:children]
-venus
-
-[venus-manager:children]
-venus
+[ovn-sb-db-relay:children]
+ovn-database
 
 [letsencrypt-webserver:children]
 letsencrypt

@@ -1,40 +1,44 @@
 ---
-- include_tasks: pkg_{{ ansible_os_family | lower }}.yml
+- name: Include package installation
+  ansible.builtin.include_tasks: pkg_{{ ansible_os_family | lower }}.yml
 
 - name: Ensure /etc/ceph exists
-  file:
+  ansible.builtin.file:
     path: /etc/ceph
     state: directory
-  become: True
+    mode: "0755"
+  become: true
 
 - name: Generate ssh key for cephadm
-  openssh_keypair:
+  community.crypto.openssh_keypair:
     path: "/etc/ceph/cephadm.id"
+    mode: "0600"
     size: 4096
     comment: "cephadm"
-  become: True
+  become: true
   register: cephadm_ssh_key
 
 - name: Save public key
-  copy:
+  ansible.builtin.copy:
     content: "{{ cephadm_ssh_key.public_key }}"
     dest: /etc/ceph/cephadm.pub
-  become: True
+    mode: "0644"
+  become: true
 
 - name: Copy cephadm public key to all hosts
-  authorized_key:
+  ansible.posix.authorized_key:
     user: root
     state: present
     key: "{{ cephadm_ssh_key.public_key }}"
-  become: True
+  become: true
   with_inventory_hostnames:
     - all
   delegate_to: "{{ item }}"
 
 - name: Bootstrap cephadm
   vars:
-    mon_ip: "{{ hostvars[inventory_hostname]['ansible_'+api_interface_name].ipv4.address }}"
-  command:
+    mon_ip: "{{ hostvars[inventory_hostname]['ansible_' + api_interface_name | replace('-', '_')].ipv4.address }}"
+  ansible.builtin.command:
     cmd: >
          cephadm
          --docker
@@ -46,42 +50,54 @@
          --skip-firewalld
          --log-to-file
          --mon-ip {{ mon_ip }}
-  become: True
+  become: true
+  changed_when: true
   register: cephadm_bootstrap_output
 
 - name: Get ceph fsid
   vars:
     regexp: 'Cluster fsid: (.*)'
-  set_fact:
-    ceph_fsid: "{{ cephadm_bootstrap_output.stdout | regex_search(regexp,'\\1') | first }}"
+  ansible.builtin.set_fact:
+    ceph_fsid: "{{ cephadm_bootstrap_output.stdout | regex_search(regexp, '\\1') | first }}"
 
 - name: Template out cluster spec
-  template:
+  ansible.builtin.template:
     src: templates/cephadm.yml.j2
     dest: "/var/run/ceph/{{ ceph_fsid }}/cluster.yml"
-  become: True
+    mode: "0600"
+  become: true
 
 - name: Template out command spec
-  template:
+  ansible.builtin.template:
     src: templates/commands.sh.j2
     dest: "/var/run/ceph/{{ ceph_fsid }}/commands.sh"
-  become: True
+    mode: "0600"
+  become: true
 
 - name: Run commands
-  command:
+  ansible.builtin.command:
     cmd: >
          cephadm shell --
          bash -x /var/run/ceph/commands.sh
-  become: True
+  become: true
+  changed_when: true
 
 # TODO(mnasiadka): Fix merge_configs to support tabs
 - name: Generate ceph.conf without tabs
   vars:
+    _mon_host: >-
+      {%- set ns = namespace(mon_host=[]) -%}
+      {%- for host in groups['all'] -%}
+      {%- set current_mon_host = hostvars[host]['ansible_' + api_interface_name | replace('-', '_')].ipv4.address -%}
+      {%- set ns.mon_host = ns.mon_host + [current_mon_host] -%}
+      {%- endfor -%}
+      {{ ns.mon_host }}
     ceph_conf_fixed: |
       [global]
       fsid = {{ ceph_fsid }}
-      mon_host = {% for host in groups['all'] %} {{ hostvars[host]['ansible_'+api_interface_name].ipv4.address }} {% if not loop.last %},{% endif %} {% endfor %}
-  copy:
+      mon_host = {{ _mon_host | join(", ") }}
+  ansible.builtin.copy:
     content: "{{ ceph_conf_fixed }}"
     dest: "/etc/ceph/ceph.conf.fixed"
-  become: True
+    mode: "0644"
+  become: true

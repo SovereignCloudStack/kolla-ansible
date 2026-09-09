@@ -20,9 +20,20 @@ import tempfile
 
 from ansible import constants
 from ansible.plugins import action
+# TODO(dougszu): From Ansible 12 onwards we must explicitly trust templates.
+# Since this feature is not supported in previous releases, we define a
+# noop method here for backwards compatibility. This can be removed in the
+# G cycle.
+try:
+    from ansible.template import trust_as_template
+except ImportError:
+    def trust_as_template(template):
+        return template
+
 from io import StringIO
 
 from oslo_config import iniparser
+
 
 _ORPHAN_SECTION = 'TEMPORARY_ORPHAN_VARIABLE_SECTION'
 
@@ -150,7 +161,7 @@ class ActionModule(action.ActionBase):
         # Only use config if present
         if os.access(source, os.R_OK):
             with open(source, 'r') as f:
-                template_data = f.read()
+                template_data = trust_as_template(f.read())
 
             # set search path to mimic 'template' module behavior
             searchpath = [
@@ -158,9 +169,12 @@ class ActionModule(action.ActionBase):
                 os.path.join(self._loader._basedir, 'templates'),
                 os.path.dirname(source),
             ]
-            self._templar.environment.loader.searchpath = searchpath
+            templar = self._templar.copy_with_new_env(searchpath=searchpath)
 
-            result = self._templar.template(template_data)
+            # lstrip_blocks avoids Jinja2 block tags (e.g. {% if %}) leaving
+            # behind leading whitespace that glues adjacent lines together.
+            result = templar.template(
+                template_data, overrides=dict(lstrip_blocks=True))
             fakefile = StringIO(result)
             config.parse(fakefile)
             fakefile.close()
@@ -214,9 +228,10 @@ class ActionModule(action.ActionBase):
                 templar=self._templar,
                 shared_loader_obj=self._shared_loader_obj)
             copy_result = copy_action.run(task_vars=task_vars)
-            copy_result['invocation']['module_args'].update({
-                'src': result_file, 'sources': sources,
-                'whitespace': whitespace})
+            if 'invocation' in copy_result:
+                copy_result['invocation']['module_args'].update({
+                    'src': result_file, 'sources': sources,
+                    'whitespace': whitespace})
             result.update(copy_result)
         finally:
             shutil.rmtree(local_tempdir)

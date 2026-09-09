@@ -27,11 +27,11 @@ Firstly, enable backups via ``globals.yml``:
 
 .. code-block:: console
 
-   enable_mariabackup: "yes"
+   enable_mariabackup: true
 
 Then, kick off a reconfiguration of MariaDB:
 
-``kolla-ansible -i INVENTORY reconfigure -t mariadb``
+``kolla-ansible reconfigure -i INVENTORY -t mariadb``
 
 Once that has run successfully, you should then be able to take full and
 incremental backups as described below.
@@ -41,11 +41,11 @@ Backup Procedure
 
 To perform a full backup, run the following command:
 
-``kolla-ansible -i INVENTORY mariadb_backup``
+``kolla-ansible mariadb-backup -i INVENTORY``
 
 Or to perform an incremental backup:
 
-``kolla-ansible -i INVENTORY mariadb_backup --incremental``
+``kolla-ansible mariadb-backup  -i INVENTORY --incremental``
 
 Kolla doesn't currently manage the scheduling of these backups, so you'll
 need to configure an appropriate scheduler (i.e cron) to run these commands
@@ -83,7 +83,7 @@ following options on the first database node:
 
    docker run --rm -it --volumes-from mariadb --name dbrestore \
       --volume mariadb_backup:/backup \
-      quay.io/openstack.kolla/centos-source-mariadb-server:|KOLLA_OPENSTACK_RELEASE| \
+      quay.io/openstack.kolla/mariadb-server:|KOLLA_OPENSTACK_RELEASE|-rocky-10 \
       /bin/bash
    (dbrestore) $ cd /backup
    (dbrestore) $ rm -rf /backup/restore
@@ -96,7 +96,7 @@ Stop the MariaDB instance on all nodes:
 
 .. code-block:: console
 
-   kolla-ansible -i multinode stop -t mariadb --yes-i-really-really-mean-it
+   kolla-ansible stop -i multinode -t mariadb --yes-i-really-really-mean-it
 
 Delete the old data files (or move them elsewhere), and copy the backup into
 place, again on the first node:
@@ -105,7 +105,7 @@ place, again on the first node:
 
    docker run --rm -it --volumes-from mariadb --name dbrestore \
       --volume mariadb_backup:/backup \
-      quay.io/openstack.kolla/centos-source-mariadb-server:|KOLLA_OPENSTACK_RELEASE| \
+      quay.io/openstack.kolla/mariadb-server:|KOLLA_OPENSTACK_RELEASE|-rocky-10 \
       /bin/bash
    (dbrestore) $ rm -rf /var/lib/mysql/*
    (dbrestore) $ rm -rf /var/lib/mysql/\.[^\.]*
@@ -127,7 +127,7 @@ pointing to the first node of the cluster:
 
 .. code-block:: console
 
-   kolla-ansible -i multinode mariadb_recovery -e mariadb_recover_inventory_name=controller1
+   kolla-ansible mariadb-recovery -i multinode -e mariadb_recover_inventory_name=controller1
 
 The above procedure is valid also for a disaster recovery scenario. In such
 case, first copy MariaDB backup file from the external source into
@@ -148,7 +148,7 @@ incremental backup,
 
    docker run --rm -it --volumes-from mariadb --name dbrestore \
       --volume mariadb_backup:/backup --tmpfs /backup/restore \
-      quay.io/openstack.kolla/centos-source-mariadb-server:|KOLLA_OPENSTACK_RELEASE| \
+      quay.io/openstack.kolla/mariadb-server:|KOLLA_OPENSTACK_RELEASE|-rocky-10 \
       /bin/bash
    (dbrestore) $ cd /backup
    (dbrestore) $ rm -rf /backup/restore

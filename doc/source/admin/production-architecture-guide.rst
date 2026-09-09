@@ -14,6 +14,8 @@ Node types and services running on them
 A basic Kolla inventory consists of several types of nodes, known in Ansible as
 ``groups``.
 
+* Deployment - Host from which you're running kolla-ansible CLI
+
 * Control - Cloud controller nodes which host control services
   like APIs and databases. This group should have odd number of nodes for
   quorum.
@@ -25,9 +27,17 @@ A basic Kolla inventory consists of several types of nodes, known in Ansible as
 * Compute - Compute nodes for compute services. This is where guest VMs
   live.
 
-* Storage - Storage nodes for cinder-volume, LVM or Swift.
+* Storage - Storage nodes for cinder-volume, LVM.
 
 * Monitoring - Monitor nodes which host monitoring services.
+
+.. warning::
+
+   All hosts should be hardened and access to them should be limited,
+   because Ansible can leak administrative passwords and other secrets to
+   system log. The same leaked passwords can be observed in OpenSearch if
+   you're pushing your system logs there.
+
 
 Network configuration
 ~~~~~~~~~~~~~~~~~~~~~
@@ -54,14 +64,6 @@ In Kolla operators should configure following network interfaces:
   ``kolla_enable_tls_external`` is set to yes. Defaults to
   ``network_interface``.
 
-* ``swift_storage_interface`` - This interface is used by Swift for storage
-  access traffic.  This can be heavily utilized so it's recommended to use
-  a high speed network fabric. Defaults to ``network_interface``.
-
-* ``swift_replication_interface`` - This interface is used by Swift for storage
-  replication traffic.  This can be heavily utilized so it's recommended to use
-  a high speed network fabric. Defaults to ``swift_storage_interface``.
-
 * ``tunnel_interface`` - This interface is used by Neutron for vm-to-vm traffic
   over tunneled networks (like VxLan). Defaults to ``network_interface``.
 
@@ -77,12 +79,6 @@ In Kolla operators should configure following network interfaces:
   Is used to provision bare metal cloud hosts, require L2 connectivity
   with the bare metal cloud hosts in order to provide DHCP leases with
   PXE boot options. Defaults to ``network_interface``.
-
-.. warning::
-
-   Ansible facts does not recognize interface names containing dashes,
-   in example ``br-ex`` or ``bond-0`` cannot be used because ansible will read
-   them as ``br_ex`` and ``bond_0`` respectively.
 
 .. _address-family-configuration:
 

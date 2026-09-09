@@ -11,10 +11,28 @@ Cinder can be deployed using Kolla and supports the following storage
 backends:
 
 * ceph
-* hnas_nfs
 * iscsi
 * lvm
 * nfs
+
+HA
+~~
+
+When using cinder-volume in an HA configuration (more than one host in
+cinder-volume/storage group):
+
+* Make sure that the driver you are using supports `Active/Active High
+  Availability
+  <https://docs.openstack.org/cinder/|OPENSTACK_RELEASE|/reference/support-matrix.html#operation_active_active_ha>`__
+  configuration
+* Add ``cinder_cluster_name: example_cluster_name`` to your ``globals.yml`` (or
+  host_vars for advanced multi-cluster configuration)
+
+.. note::
+
+   In case of non-standard configurations (e.g. mixed HA and non-HA Cinder backends),
+   you can skip the prechecks by setting ``cinder_cluster_skip_precheck`` to
+   ``true``.
 
 LVM
 ~~~
@@ -47,7 +65,15 @@ Enable the ``lvm`` backend in ``/etc/kolla/globals.yml``:
 
 .. code-block:: yaml
 
-   enable_cinder_backend_lvm: "yes"
+   enable_cinder_backend_lvm: true
+
+Edit the inventory file and add ``storage`` group as a child of
+``cinder-volume`` group:
+
+.. code-block:: ini
+
+   [cinder-volume:children]
+   storage
 
 .. note::
 
@@ -87,7 +113,7 @@ Finally, enable the ``nfs`` backend in ``/etc/kolla/globals.yml``:
 
 .. code-block:: yaml
 
-   enable_cinder_backend_nfs: "yes"
+   enable_cinder_backend_nfs: true
 
 Validation
 ~~~~~~~~~~
@@ -133,9 +159,11 @@ Cinder LVM2 backend with iSCSI
 
 As of Newton-1 milestone, Kolla supports LVM2 as cinder backend. It is
 accomplished by introducing two new containers ``tgtd`` and ``iscsid``.
-``tgtd`` container serves as a bridge between cinder-volume process and a
-server hosting Logical Volume Groups (LVG). ``iscsid`` container serves as
-a bridge between nova-compute process and the server hosting LVG.
+``tgtd`` container is the target part of iSCSI setup which needs to run
+on the ``storage`` Ansible group for exposing volumes from LVM.
+``iscsid`` container is the client part of iSCSI setup which needs to run
+together with nova-compute for instance access to storage and on hosts
+running ``cinder-volume`` and ``cinder-backup`` for volume operations.
 
 In order to use Cinder's LVM backend, a LVG named ``cinder-volumes`` should
 exist on the server and following parameter must be specified in
@@ -143,38 +171,7 @@ exist on the server and following parameter must be specified in
 
 .. code-block:: yaml
 
-   enable_cinder_backend_lvm: "yes"
-
-For Ubuntu and LVM2/iSCSI
--------------------------
-
-``iscsd`` process uses configfs which is normally mounted at
-``/sys/kernel/config`` to store discovered targets information, on centos/rhel
-type of systems this special file system gets mounted automatically, which is
-not the case on debian/ubuntu. Since ``iscsid`` container runs on every nova
-compute node, the following steps must be completed on every Ubuntu server
-targeted for nova compute role.
-
-- Add configfs module to ``/etc/modules``
-- Rebuild initramfs using: ``update-initramfs -u`` command
-- Stop ``open-iscsi`` system service due to its conflicts
-  with iscsid container.
-
-  Ubuntu 16.04 (systemd):
-  ``systemctl stop open-iscsi; systemctl stop iscsid``
-
-- Make sure configfs gets mounted during a server boot up process. There are
-  multiple ways to accomplish it, one example:
-
-  .. code-block:: console
-
-     mount -t configfs /etc/rc.local /sys/kernel/config
-
-  .. note::
-
-     There is currently an issue with the folder /sys/kernel/config as it is
-     either empty or does not exist in several operating systems,
-     see `_bug 1631072 <https://bugs.launchpad.net/kolla/+bug/1631072>`__ for more info
+   enable_cinder_backend_lvm: true
 
 Cinder backend with external iSCSI storage
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -184,9 +181,52 @@ the following parameter must be specified in ``globals.yml``:
 
 .. code-block:: yaml
 
-   enable_cinder_backend_iscsi: "yes"
+   enable_cinder_backend_iscsi: true
 
-Also ``enable_cinder_backend_lvm`` should be set to ``no`` in this case.
+Also ``enable_cinder_backend_lvm`` should be set to ``false`` in this case.
+
+VAST Data NVMe/TCP backend
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To use the ``VAST Data NVMe/TCP`` Cinder backend, enable and configure the
+VAST Data Cinder driver in ``globals.yml``:
+
+.. code-block:: yaml
+
+   enable_cinder_backend_vast: true
+
+.. end
+
+The following parameters must also be set in ``globals.yml``:
+
+* ``cinder_vast_ip`` - management IP address of the VAST storage system
+* ``cinder_vast_vippool_name`` - name of the Virtual IP pool configured for
+                                 NVMe/TCP connections
+* ``cinder_vast_subsystem`` - NVMe subsystem identifier
+
+Authentication is configured using either an API token (recommended) or
+username and password. Set the following in ``passwords.yml``:
+
+* ``cinder_vast_api_token`` - management API token (recommended)
+
+If an API token is not available, the following parameter must instead be set
+in ``passwords.yml``:
+
+* ``cinder_vast_password`` - management API password
+
+The following parameters may optionally be overridden in ``globals.yml``:
+
+* ``cinder_backend_vast_name`` - volume backend name,
+                                 (default: ``vast-nvme-tcp``)
+* ``cinder_vast_port`` - management API port (default: ``443``)
+* ``cinder_vast_username`` - management API username (default: ``admin``)
+
+For details on these parameters and additional options, refer to the
+`VAST Data Cinder driver documentation <https://kb.vastdata.com/documentation/docs/vast-driver-for-cinder>`_
+and the `VAST Data Cinder Reference Guide <https://docs.openstack.org/cinder/latest/configuration/block-storage/drivers/vastdata-volume-driver.html>`_.
+
+On the VAST cluster, a VIP pool and NVMe subsystem must be configured for
+block storage operations prior to deploying this backend.
 
 Skip Cinder prechecks for Custom backends
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -257,27 +297,27 @@ that appears in cinder.conf:
    * - Network File System (NFS)
      - cinder_backend_nfs_name
      - nfs-1
-   * - Hitachi NAS Platform NFS
-     - cinder_backend_hnas_nfs_name
-     - hnas-nfs
-   * - VMware Virtual Machine Disk File
-     - cinder_backend_vmwarevc_vmdk_name
-     - vmwarevc-vmdk
-   * - VMware VStorage (Object Storage)
-     - cinder_backend_vmware_vstorage_object_name
-     - vmware-vstorage-object
    * - Quobyte Storage for OpenStack
      - cinder_backend_quobyte_name
      - QuobyteHD
-   * - Pure Storage FlashArray for OpenStack (iSCSI)
+   * - Everpure FlashArray for OpenStack (iSCSI)
      - cinder_backend_pure_iscsi_name
      - Pure-FlashArray-iscsi
-   * - Pure Storage FlashArray for OpenStack
+   * - Everpure FlashArray for OpenStack (FC)
      - cinder_backend_pure_fc_name
      - Pure-FlashArray-fc
-   * - Pure Storage FlashArray for OpenStack
+   * - Everpure FlashArray for OpenStack (NVMe-RoCE)
      - cinder_backend_pure_roce_name
      - Pure-FlashArray-roce
+   * - Everpure FlashArray for OpenStack (NVMe-TCP)
+     - cinder_backend_pure_nvme_tcp_name
+     - Pure-FlashArray-nvme-tcp
+   * - Lightbits Labs storage backend
+     - cinder_backend_lightbits_name
+     - Lightbits-NVMe-TCP
+   * - VAST storage backend
+     - cinder_backend_vast_name
+     - vast-nvme-tcp
 
 These are the names you use when
 `configuring <https://docs.openstack.org/cinder/latest/admin/multi-backend.html#volume-type>`_

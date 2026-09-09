@@ -19,8 +19,6 @@ import os
 from ansible.module_utils.kolla_container_worker import COMPARE_CONFIG_CMD
 from ansible.module_utils.kolla_container_worker import ContainerWorker
 
-from distutils.version import StrictVersion
-
 
 def get_docker_client():
     return docker.APIClient
@@ -38,18 +36,13 @@ class DockerWorker(ContainerWorker):
 
         self.dc = get_docker_client()(**options)
 
-        self._cgroupns_mode_supported = (
-            StrictVersion(self.dc._version) >= StrictVersion('1.41'))
-        self._dimensions_kernel_memory_removed = (
-            StrictVersion(self.dc._version) >= StrictVersion('1.42'))
-
-        if self._dimensions_kernel_memory_removed:
-            self.dimension_map.pop('kernel_memory', None)
+        self._dimensions_kernel_memory_removed = True
+        self.dimension_map.pop('kernel_memory', None)
 
     def generate_tls(self):
         tls = {'verify': self.params.get('tls_verify')}
-        tls_cert = self.params.get('tls_cert'),
-        tls_key = self.params.get('tls_key'),
+        tls_cert = self.params.get('tls_cert')
+        tls_key = self.params.get('tls_key')
         tls_cacert = self.params.get('tls_cacert')
 
         if tls['verify']:
@@ -84,6 +77,7 @@ class DockerWorker(ContainerWorker):
             for image_name in repo_tags:
                 if image_name == find_image:
                     return image
+        return dict()
 
     def check_volume(self):
         for vol in self.dc.volumes()['Volumes'] or list():
@@ -165,6 +159,7 @@ class DockerWorker(ContainerWorker):
             # in the mean time) - assume config is stale = return True.
             # Else, propagate the server error back.
             if e.is_client_error():
+                self._config_diff = 'container unavailable for config check'
                 return True
             else:
                 raise
@@ -176,16 +171,27 @@ class DockerWorker(ContainerWorker):
         if exec_inspect['ExitCode'] == 0:
             return False
         elif exec_inspect['ExitCode'] == 1:
+            self._config_diff = (output.decode('utf-8') if
+                                 isinstance(output, bytes) else output)
             return True
         elif exec_inspect['ExitCode'] == 137:
             # NOTE(yoctozepto): This is Docker's command exit due to container
             # exit. It means the container is unstable so we are better off
             # marking it as requiring a restart due to config update.
+            self._config_diff = 'container exited abruptly during config check'
             return True
         else:
             raise Exception('Failed to compare container configuration: '
                             'ExitCode: %s Message: %s' %
                             (exec_inspect['ExitCode'], output))
+
+    def dimensions_differ(self, a, b, key):
+        if key in ('cpuset_cpus', 'cpuset_mems'):
+            a = str(a or '')
+            b = str(b or '')
+            return a != b
+
+        return super().dimensions_differ(a, b, key)
 
     def get_image_id(self):
         full_image = self.params.get('image')
@@ -304,12 +310,11 @@ class DockerWorker(ContainerWorker):
 
         host_config = self.dc.create_host_config(**options)
 
-        if self._cgroupns_mode_supported:
-            # NOTE(yoctozepto): python-docker does not support CgroupnsMode
-            # natively so we stuff it in manually.
-            cgroupns_mode = self.params.get('cgroupns_mode')
-            if cgroupns_mode is not None:
-                host_config['CgroupnsMode'] = cgroupns_mode
+        # NOTE(yoctozepto): python-docker does not support CgroupnsMode
+        # natively so we stuff it in manually.
+        cgroupns_mode = self.params.get('cgroupns_mode')
+        if cgroupns_mode is not None:
+            host_config['CgroupnsMode'] = cgroupns_mode
 
         # detached containers should only log to journald
         if self.params.get('detach'):
@@ -317,17 +322,6 @@ class DockerWorker(ContainerWorker):
                 type=docker.types.LogConfig.types.NONE)
 
         return host_config
-
-    def _inject_env_var(self, environment_info):
-        newenv = {
-            'KOLLA_SERVICE_NAME': self.params.get('name').replace('_', '-')
-        }
-        environment_info.update(newenv)
-        return environment_info
-
-    def _format_env_vars(self):
-        env = self._inject_env_var(self.params.get('environment'))
-        return {k: "" if env[k] is None else env[k] for k in env}
 
     def build_container_options(self):
         volumes, binds = self.generate_volumes()
@@ -352,6 +346,9 @@ class DockerWorker(ContainerWorker):
 
     def create_container(self):
         self.changed = True
+        # ensure volumes are pre-created before container creation
+        self.create_container_volumes()
+
         options = self.build_container_options()
         self.dc.create_container(**options)
         if self.params.get('restart_policy') != 'oneshot':
@@ -477,10 +474,25 @@ class DockerWorker(ContainerWorker):
                 self.dc.stop(name, timeout=graceful_timeout)
                 self.dc.start(name)
 
-    def create_volume(self):
+    def create_volume(self, name=None):
+        volume_name = name if name else self.params.get('name')
         if not self.check_volume():
             self.changed = True
-            self.dc.create_volume(name=self.params.get('name'), driver='local')
+            self.dc.create_volume(name=volume_name, driver='local',
+                                  labels={'kolla_managed': 'true'})
+
+    def create_container_volumes(self):
+        volumes = self.params.get('volumes')
+        if not volumes:
+            return
+        # Filter out null / empty string volumes
+        volumes = [v for v in volumes if v]
+        for volume in volumes:
+            volume_name = volume.split(":")[0]
+            if "/" in volume_name:
+                continue
+
+            self.create_volume(name=volume_name)
 
     def remove_volume(self):
         if self.check_volume():

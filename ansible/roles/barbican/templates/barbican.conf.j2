@@ -11,10 +11,15 @@ host_href = {{ barbican_public_endpoint }}
 
 backlog = 4096
 
-db_auto_create = False
-sql_connection = mysql+pymysql://{{ barbican_database_user }}:{{ barbican_database_password }}@{{ barbican_database_address }}/{{ barbican_database_name }}
+db_auto_create = false
 
 transport_url = {{ rpc_transport_url }}
+
+[database]
+connection = mysql+pymysql://{{ barbican_database_user }}:{{ barbican_database_password }}@{{ barbican_database_address }}/{{ barbican_database_name }}{{ '?ssl_ca=' ~ openstack_cacert if barbican_database_enable_tls_internal | bool }}
+connection_recycle_time = {{ database_connection_recycle_time }}
+max_pool_size = {{ database_max_pool_size }}
+max_retries = -1
 
 # ================= Secret Store Plugin ===================
 [secretstore]
@@ -47,14 +52,14 @@ kek = '{{ barbican_crypto_key }}'
 
 
 [keystone_notifications]
-enable = True
+enable = true
 {% if enable_keystone | bool %}
 topic = barbican_notifications
 {% endif %}
 
 [keystone_authtoken]
 service_type = key-manager
-www_authenticate_uri = {{ keystone_internal_url }}
+www_authenticate_uri = {{ keystone_public_url }}
 project_domain_id = {{ default_project_domain_id }}
 project_name = service
 user_domain_id = {{ default_user_domain_id }}
@@ -65,7 +70,7 @@ auth_type = password
 cafile = {{ openstack_cacert }}
 region_name = {{ openstack_region_name }}
 
-memcache_security_strategy = ENCRYPT
+memcache_security_strategy = {{ memcache_security_strategy }}
 memcache_secret_key = {{ memcache_secret_key }}
 memcached_servers = {% for host in groups['memcached'] %}{{ 'api' | kolla_address(host) | put_address_in_context('memcache') }}:{{ memcached_port }}{% if not loop.last %},{% endif %}{% endfor %}
 
@@ -79,19 +84,26 @@ driver = noop
 {% endif %}
 
 [oslo_messaging_rabbit]
+use_queue_manager = true
 heartbeat_in_pthread = false
 {% if om_enable_rabbitmq_tls | bool %}
 ssl = true
 ssl_ca_file = {{ om_rabbitmq_cacert }}
 {% endif %}
-{% if om_enable_rabbitmq_high_availability | bool %}
-amqp_durable_queues = true
+rabbit_quorum_queue = true
+{% if om_enable_rabbitmq_stream_fanout | bool %}
+rabbit_stream_fanout = true
+rabbit_qos_prefetch_count = {{ om_rabbitmq_qos_prefetch_count }}
 {% endif %}
+rabbit_transient_quorum_queue = true
 
 [oslo_middleware]
-enable_proxy_headers_parsing = True
+enable_proxy_headers_parsing = true
 
 {% if barbican_policy_file is defined %}
 [oslo_policy]
 policy_file = {{ barbican_policy_file }}
 {% endif %}
+
+[oslo_concurrency]
+lock_path = /var/lib/barbican/tmp

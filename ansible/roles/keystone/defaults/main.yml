@@ -8,6 +8,7 @@ keystone_services:
     volumes: "{{ keystone_default_volumes + keystone_extra_volumes }}"
     dimensions: "{{ keystone_dimensions }}"
     healthcheck: "{{ keystone_healthcheck }}"
+    wsgi: "keystone.wsgi.api:application"
     haproxy:
       keystone_internal:
         enabled: "{{ enable_keystone }}"
@@ -16,7 +17,10 @@ keystone_services:
         tls_backend: "{{ keystone_enable_tls_backend }}"
         port: "{{ keystone_internal_port }}"
         listen_port: "{{ keystone_internal_listen_port }}"
-        backend_http_extra: "{{ ['balance source'] if enable_keystone_federation | bool else [] }}"
+        backend_http_extra:
+          - "balance {{ 'source' if enable_keystone_federation | bool else 'roundrobin' }}"
+          - "option httpchk GET /healthcheck"
+          - "http-check expect status 200"
       keystone_external:
         enabled: "{{ enable_keystone }}"
         mode: "http"
@@ -25,20 +29,10 @@ keystone_services:
         tls_backend: "{{ keystone_enable_tls_backend }}"
         port: "{{ keystone_public_port }}"
         listen_port: "{{ keystone_public_listen_port }}"
-        backend_http_extra: "{{ ['balance source'] if enable_keystone_federation | bool else [] }}"
-  keystone-ssh:
-    container_name: "keystone_ssh"
-    group: "keystone"
-    enabled: true
-    image: "{{ keystone_ssh_image_full }}"
-    volumes:
-      - "{{ node_config_directory }}/keystone-ssh/:{{ container_config_directory }}/:ro"
-      - "/etc/localtime:/etc/localtime:ro"
-      - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
-      - "kolla_logs:/var/log/kolla/"
-      - "keystone_fernet_tokens:/etc/keystone/fernet-keys"
-    dimensions: "{{ keystone_ssh_dimensions }}"
-    healthcheck: "{{ keystone_ssh_healthcheck }}"
+        backend_http_extra:
+          - "balance {{ 'source' if enable_keystone_federation | bool else 'roundrobin' }}"
+          - "option httpchk GET /healthcheck"
+          - "http-check expect status 200"
   keystone-fernet:
     container_name: "keystone_fernet"
     group: "keystone"
@@ -46,12 +40,29 @@ keystone_services:
     image: "{{ keystone_fernet_image_full }}"
     volumes:
       - "{{ node_config_directory }}/keystone-fernet/:{{ container_config_directory }}/:ro"
-      - "/etc/localtime:/etc/localtime:ro"
-      - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
       - "kolla_logs:/var/log/kolla/"
       - "keystone_fernet_tokens:/etc/keystone/fernet-keys"
     dimensions: "{{ keystone_fernet_dimensions }}"
     healthcheck: "{{ keystone_fernet_healthcheck }}"
+  keystone-httpd:
+    container_name: "keystone_httpd"
+    group: "keystone"
+    enabled: "{{ enable_keystone_federation | bool }}"
+    image: "{{ keystone_httpd_image_full }}"
+    volumes: "{{ keystone_httpd_default_volumes + keystone_httpd_extra_volumes }}"
+    dimensions: "{{ keystone_httpd_dimensions }}"
+    healthcheck: "{{ keystone_httpd_healthcheck }}"
+  keystone-ssh:
+    container_name: "keystone_ssh"
+    group: "keystone"
+    enabled: true
+    image: "{{ keystone_ssh_image_full }}"
+    volumes:
+      - "{{ node_config_directory }}/keystone-ssh/:{{ container_config_directory }}/:ro"
+      - "kolla_logs:/var/log/kolla/"
+      - "keystone_fernet_tokens:/etc/keystone/fernet-keys"
+    dimensions: "{{ keystone_ssh_dimensions }}"
+    healthcheck: "{{ keystone_ssh_healthcheck }}"
 
 ####################
 # Config Validate
@@ -76,8 +87,11 @@ keystone_database_shard:
   users:
     - user: "{{ keystone_database_user }}"
       password: "{{ keystone_database_password }}"
+      shard_id: "{{ keystone_database_shard_id }}"
   rules:
     - schema: "{{ keystone_database_name }}"
+      shard_id: "{{ keystone_database_shard_id }}"
+    - user: "{{ keystone_database_user }}"
       shard_id: "{{ keystone_database_shard_id }}"
 
 
@@ -93,19 +107,24 @@ keystone_groupname: "keystone"
 ####################
 keystone_tag: "{{ openstack_tag }}"
 
-keystone_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/keystone"
+keystone_image: "{{ docker_image_url }}keystone"
 keystone_service_tag: "{{ keystone_tag }}"
 keystone_image_full: "{{ keystone_image }}:{{ keystone_service_tag }}"
 
-keystone_fernet_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/keystone-fernet"
+keystone_httpd_image: "{{ docker_image_url }}httpd"
+keystone_httpd_tag: "{{ keystone_tag }}"
+keystone_httpd_image_full: "{{ keystone_httpd_image }}:{{ keystone_httpd_tag }}"
+
+keystone_fernet_image: "{{ docker_image_url }}keystone-fernet"
 keystone_fernet_tag: "{{ keystone_tag }}"
 keystone_fernet_image_full: "{{ keystone_fernet_image }}:{{ keystone_fernet_tag }}"
 
-keystone_ssh_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/keystone-ssh"
+keystone_ssh_image: "{{ docker_image_url }}keystone-ssh"
 keystone_ssh_tag: "{{ keystone_tag }}"
 keystone_ssh_image_full: "{{ keystone_ssh_image }}:{{ keystone_ssh_tag }}"
 
 keystone_dimensions: "{{ default_container_dimensions }}"
+keystone_httpd_dimensions: "{{ default_container_dimensions }}"
 keystone_fernet_dimensions: "{{ default_container_dimensions }}"
 keystone_ssh_dimensions: "{{ default_container_dimensions }}"
 
@@ -113,7 +132,11 @@ keystone_enable_healthchecks: "{{ enable_container_healthchecks }}"
 keystone_healthcheck_interval: "{{ default_container_healthcheck_interval }}"
 keystone_healthcheck_retries: "{{ default_container_healthcheck_retries }}"
 keystone_healthcheck_start_period: "{{ default_container_healthcheck_start_period }}"
-keystone_healthcheck_test: ["CMD-SHELL", "healthcheck_curl {{ 'https' if keystone_enable_tls_backend | bool else 'http' }}://{{ api_interface_address | put_address_in_context('url') }}:{{ keystone_public_listen_port }}"]
+keystone_healthcheck_test:
+  - "CMD-SHELL"
+  - >-
+    healthcheck_curl {{ 'https' if keystone_enable_tls_backend | bool else 'http' }}://{{
+    api_interface_address | put_address_in_context('url') }}:{{ keystone_public_listen_port }}/healthcheck
 keystone_healthcheck_timeout: "{{ default_container_healthcheck_timeout }}"
 keystone_healthcheck:
   interval: "{{ keystone_healthcheck_interval }}"
@@ -122,18 +145,22 @@ keystone_healthcheck:
   test: "{% if keystone_enable_healthchecks | bool %}{{ keystone_healthcheck_test }}{% else %}NONE{% endif %}"
   timeout: "{{ keystone_healthcheck_timeout }}"
 
-keystone_ssh_enable_healthchecks: "{{ enable_container_healthchecks }}"
-keystone_ssh_healthcheck_interval: "{{ default_container_healthcheck_interval }}"
-keystone_ssh_healthcheck_retries: "{{ default_container_healthcheck_retries }}"
-keystone_ssh_healthcheck_start_period: "{{ default_container_healthcheck_start_period }}"
-keystone_ssh_healthcheck_test: ["CMD-SHELL", "healthcheck_listen sshd {{ keystone_ssh_port }}"]
-keystone_ssh_healthcheck_timeout: "{{ default_container_healthcheck_timeout }}"
-keystone_ssh_healthcheck:
-  interval: "{{ keystone_ssh_healthcheck_interval }}"
-  retries: "{{ keystone_ssh_healthcheck_retries }}"
-  start_period: "{{ keystone_ssh_healthcheck_start_period }}"
-  test: "{% if keystone_ssh_enable_healthchecks | bool %}{{ keystone_ssh_healthcheck_test }}{% else %}NONE{% endif %}"
-  timeout: "{{ keystone_ssh_healthcheck_timeout }}"
+keystone_httpd_enable_healthchecks: "{{ enable_container_healthchecks }}"
+keystone_httpd_healthcheck_interval: "{{ default_container_healthcheck_interval }}"
+keystone_httpd_healthcheck_retries: "{{ default_container_healthcheck_retries }}"
+keystone_httpd_healthcheck_start_period: "{{ default_container_healthcheck_start_period }}"
+keystone_httpd_healthcheck_test:
+  - "CMD-SHELL"
+  - >-
+    healthcheck_curl {{ 'https' if keystone_enable_tls_backend | bool else 'http' }}://{{
+    api_interface_address | put_address_in_context('url') }}:{{ keystone_public_listen_port }}
+keystone_httpd_healthcheck_timeout: "{{ default_container_healthcheck_timeout }}"
+keystone_httpd_healthcheck:
+  interval: "{{ keystone_httpd_healthcheck_interval }}"
+  retries: "{{ keystone_httpd_healthcheck_retries }}"
+  start_period: "{{ keystone_httpd_healthcheck_start_period }}"
+  test: "{% if keystone_httpd_enable_healthchecks | bool %}{{ keystone_httpd_healthcheck_test }}{% else %}NONE{% endif %}"
+  timeout: "{{ keystone_httpd_healthcheck_timeout }}"
 
 keystone_fernet_enable_healthchecks: "{{ enable_container_healthchecks }}"
 keystone_fernet_healthcheck_interval: "{{ default_container_healthcheck_interval }}"
@@ -148,15 +175,32 @@ keystone_fernet_healthcheck:
   test: "{% if keystone_fernet_enable_healthchecks | bool %}{{ keystone_fernet_healthcheck_test }}{% else %}NONE{% endif %}"
   timeout: "{{ keystone_fernet_healthcheck_timeout }}"
 
+keystone_ssh_enable_healthchecks: "{{ enable_container_healthchecks }}"
+keystone_ssh_healthcheck_interval: "{{ default_container_healthcheck_interval }}"
+keystone_ssh_healthcheck_retries: "{{ default_container_healthcheck_retries }}"
+keystone_ssh_healthcheck_start_period: "{{ default_container_healthcheck_start_period }}"
+keystone_ssh_healthcheck_test: ["CMD-SHELL", "healthcheck_listen sshd {{ keystone_ssh_port }}"]
+keystone_ssh_healthcheck_timeout: "{{ default_container_healthcheck_timeout }}"
+keystone_ssh_healthcheck:
+  interval: "{{ keystone_ssh_healthcheck_interval }}"
+  retries: "{{ keystone_ssh_healthcheck_retries }}"
+  start_period: "{{ keystone_ssh_healthcheck_start_period }}"
+  test: "{% if keystone_ssh_enable_healthchecks | bool %}{{ keystone_ssh_healthcheck_test }}{% else %}NONE{% endif %}"
+  timeout: "{{ keystone_ssh_healthcheck_timeout }}"
+
 keystone_default_volumes:
   - "{{ node_config_directory }}/keystone/:{{ container_config_directory }}/:ro"
-  - "/etc/localtime:/etc/localtime:ro"
-  - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
-  - "{{ kolla_dev_repos_directory ~ '/keystone/keystone:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/keystone' if keystone_dev_mode | bool else '' }}"
+  - "{{ kolla_dev_repos_directory ~ '/keystone:/dev-mode/keystone' if keystone_dev_mode | bool else '' }}"
   - "kolla_logs:/var/log/kolla/"
+  - "{{ '/dev/shm:/dev/shm' }}"
   - "keystone_fernet_tokens:/etc/keystone/fernet-keys"
 
+keystone_httpd_default_volumes:
+  - "{{ node_config_directory }}/keystone-httpd/:{{ container_config_directory }}/:ro"
+  - "kolla_logs:/var/log/kolla/"
+
 keystone_extra_volumes: "{{ default_extra_volumes }}"
+keystone_httpd_extra_volumes: "{{ keystone_extra_volumes }}"
 
 ####################
 # OpenStack
@@ -198,15 +242,11 @@ keystone_service_endpoints:
   - {'interface': 'internal', 'url': '{{ keystone_internal_url }}'}
   - {'interface': 'public', 'url': '{{ keystone_public_url }}'}
 
-# TODO(yoctozepto): Remove admin_endpoint leftovers in Antelope (2023.1).
-keystone_service_admin_endpoint: {'interface': 'admin', 'url': '{{ keystone_internal_url }}'}
-keystone_create_admin_endpoint: false
-
 keystone_ks_services:
   - name: "keystone"
     type: "identity"
     description: "Openstack Identity Service"
-    endpoints: "{{ keystone_service_endpoints + ([keystone_service_admin_endpoint] if kolla_action == 'upgrade' or keystone_create_admin_endpoint | bool else []) }}"
+    endpoints: "{{ keystone_service_endpoints }}"
 
 ####################
 # TLS
@@ -221,20 +261,58 @@ keystone_remote_id_attribute_oidc: "HTTP_OIDC_ISS"
 keystone_container_federation_oidc_metadata_folder: "{{ '/etc/apache2/metadata' if kolla_base_distro in ['debian', 'ubuntu'] else '/etc/httpd/metadata' }}"
 keystone_container_federation_oidc_idp_certificate_folder: "{{ '/etc/apache2/cert' if kolla_base_distro in ['debian', 'ubuntu'] else '/etc/httpd/cert' }}"
 keystone_container_federation_oidc_attribute_mappings_folder: "{{ container_config_directory }}/federation/oidc/attribute_maps"
-keystone_host_federation_oidc_metadata_folder: "{{ node_config_directory }}/keystone/federation/oidc/metadata"
-keystone_host_federation_oidc_idp_certificate_folder: "{{ node_config_directory }}/keystone/federation/oidc/cert"
-keystone_host_federation_oidc_attribute_mappings_folder: "{{ node_config_directory }}/keystone/federation/oidc/attribute_maps"
+keystone_host_federation_base_folder: "{{ node_config_directory }}/keystone-httpd/federation"
+keystone_host_federation_oidc_metadata_folder: "{{ keystone_host_federation_base_folder }}/oidc/metadata"
+keystone_host_federation_oidc_idp_certificate_folder: "{{ keystone_host_federation_base_folder }}/oidc/cert"
+keystone_host_federation_oidc_attribute_mappings_folder: "{{ keystone_host_federation_base_folder }}/oidc/attribute_maps"
 keystone_federation_oidc_jwks_uri: ""
 keystone_federation_oidc_additional_options: {}
 
+keystone_federation_oidc_error_page_retry_login_delay_milliseconds: 5000
+
 # These variables are used to define multiple trusted Horizon dashboards.
-# keystone_trusted_dashboards: ['<https://dashboardServerOne/auth/websso/>', '<https://dashboardServerTwo/auth/websso/>', '<https://dashboardServerN/auth/websso/>']
-keystone_trusted_dashboards: "{{ ['%s://%s/auth/websso/' % (public_protocol, kolla_external_fqdn), '%s/auth/websso/' % (horizon_public_endpoint)] if enable_horizon | bool else [] }}"
-keystone_enable_federation_openid: "{{ enable_keystone_federation | bool and keystone_identity_providers | selectattr('protocol', 'equalto', 'openid') | list | count > 0 }}"
-keystone_should_remove_attribute_mappings: False
-keystone_should_remove_identity_providers: False
+# keystone_trusted_dashboards:
+#   - '<https://dashboardServerOne/auth/websso/>'
+#   - '<https://dashboardServerTwo/auth/websso/>'
+#   - '<https://dashboardServerN/auth/websso/>'
+horizon_trusted_dashboards: >-
+  {{
+    ['%s://%s/auth/websso/' % (public_protocol, kolla_external_fqdn), '%s/auth/websso/' % (horizon_public_endpoint)] if enable_horizon | bool
+    else []
+  }}
+skyline_trusted_dashboards: >-
+  {{
+    ['%s/api/openstack/skyline/api/v1/websso' % (skyline_console_public_endpoint)] if enable_skyline | bool
+    else []
+  }}
+keystone_trusted_dashboards: "{{ horizon_trusted_dashboards + skyline_trusted_dashboards }}"
+keystone_enable_federation_openid: >-
+  {{
+    enable_keystone_federation | bool and
+    keystone_identity_providers | selectattr('protocol', 'equalto', 'openid') | list | count > 0
+  }}
+keystone_should_remove_attribute_mappings: false
+keystone_should_remove_identity_providers: false
 keystone_federation_oidc_response_type: "id_token"
+# can be set to any supported headers, according to
+# https://github.com/OpenIDC/mod_auth_openidc/blob/ea3af872dcdbb4634a7e541c5e8c7326dafbb090/auth_openidc.conf
+# e.g."X-Forwarded-Proto", "X-Forwarded-Port" etc.
+keystone_federation_oidc_forwarded_headers: ""
+keystone_federation_oidc_claim_delimiter: ";"
 keystone_federation_oidc_scopes: "openid email profile"
 
 # OIDC caching
 keystone_oidc_enable_memcached: "{{ enable_memcached }}"
+
+# Database
+keystone_database_enable_tls_internal: "{{ database_enable_tls_internal | bool }}"
+
+###################
+# Copy certificates
+###################
+keystone_copy_certs: "{{ kolla_copy_ca_into_containers | bool or keystone_enable_tls_backend | bool or keystone_database_enable_tls_internal | bool }}"
+
+############
+# WSGI
+############
+keystone_wsgi_socket_port: "5001"

@@ -3,22 +3,18 @@
 {
     "command": "{{ apache_cmd }} -DFOREGROUND",
     "config_files": [
-{% if groups['ironic-inspector'] | length > 0 %}
+{% for item in ironic_agent_files if groups['ironic-dnsmasq'] | length > 0 %}
         {
-            "source": "{{ container_config_directory }}/ironic-agent.kernel",
-            "dest": "/var/lib/ironic/httpboot/ironic-agent.kernel",
+            "source": "{{ container_config_directory }}/{{ item }}",
+            "dest": "/var/lib/ironic/httpboot/{{ item }}",
             "owner": "root",
             "perm": "0644"
         },
+{% endfor %}
+{% if groups['ironic-dnsmasq'] | length > 0 %}
         {
-            "source": "{{ container_config_directory }}/ironic-agent.initramfs",
-            "dest": "/var/lib/ironic/httpboot/ironic-agent.initramfs",
-            "owner": "root",
-            "perm": "0644"
-        },
-        {
-            "source": "{{ container_config_directory }}/inspector.ipxe",
-            "dest": "/var/lib/ironic/httpboot/inspector.ipxe",
+            "source": "{{ container_config_directory }}/ipa.ipxe",
+            "dest": "/var/lib/ironic/httpboot/ipa.ipxe",
             "owner": "root",
             "perm": "0644"
         },
@@ -28,6 +24,31 @@
             "dest": "/etc/{{ apache_conf_dir }}/httpboot.conf",
             "owner": "root",
             "perm": "0644"
+        }{% if kolla_copy_ca_into_containers | bool %},
+        {
+            "source": "{{ container_config_directory }}/ca-certificates",
+            "dest": "/var/lib/kolla/share/ca-certificates",
+            "owner": "root",
+            "perm": "0644"
+        }{% endif %}
+    ],
+    "directories": [
+        {
+            "path": "/var/log/kolla",
+            "owner": "fluentd:kolla",
+            "perm": "2775"
+        },
+        {
+            "path": "/var/log/kolla/ironic",
+            "owner": "ironic:kolla",
+            "perm": "2775"
+        }
+    ],
+    "permissions": [
+        {
+            "path": "/var/log/kolla/ironic/*.log",
+            "owner": "ironic:kolla",
+            "perm": "0664"
         }
     ]
 }

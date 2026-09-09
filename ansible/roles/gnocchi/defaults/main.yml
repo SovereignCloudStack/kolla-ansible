@@ -8,6 +8,7 @@ gnocchi_services:
     volumes: "{{ gnocchi_api_default_volumes + gnocchi_api_extra_volumes }}"
     dimensions: "{{ gnocchi_api_dimensions }}"
     healthcheck: "{{ gnocchi_api_healthcheck }}"
+    wsgi: "gnocchi.wsgi.api:application"
     haproxy:
       gnocchi_api:
         enabled: "{{ enable_gnocchi }}"
@@ -15,6 +16,9 @@ gnocchi_services:
         external: false
         port: "{{ gnocchi_api_port }}"
         listen_port: "{{ gnocchi_api_listen_port }}"
+        backend_http_extra:
+          - "option httpchk GET /healthcheck"
+          - "http-check expect status 200"
       gnocchi_api_external:
         enabled: "{{ enable_gnocchi }}"
         mode: "http"
@@ -22,6 +26,9 @@ gnocchi_services:
         external_fqdn: "{{ gnocchi_external_fqdn }}"
         port: "{{ gnocchi_api_public_port }}"
         listen_port: "{{ gnocchi_api_listen_port }}"
+        backend_http_extra:
+          - "option httpchk GET /healthcheck"
+          - "http-check expect status 200"
   gnocchi-metricd:
     container_name: gnocchi_metricd
     group: gnocchi-metricd
@@ -47,13 +54,6 @@ gnocchi_config_validation:
     config: "/etc/gnocchi/gnocchi.conf"
 
 ####################
-# Swift
-####################
-swift_keystone_user: "swift"
-swift_admin_tenant_name: "admin"
-
-
-####################
 # Database
 ####################
 gnocchi_database_name: "gnocchi"
@@ -69,8 +69,11 @@ gnocchi_database_shard:
   users:
     - user: "{{ gnocchi_database_user }}"
       password: "{{ gnocchi_database_password }}"
+      shard_id: "{{ gnocchi_database_shard_id }}"
   rules:
     - schema: "{{ gnocchi_database_name }}"
+      shard_id: "{{ gnocchi_database_shard_id }}"
+    - user: "{{ gnocchi_database_user }}"
       shard_id: "{{ gnocchi_database_shard_id }}"
 
 
@@ -79,15 +82,15 @@ gnocchi_database_shard:
 ####################
 gnocchi_tag: "{{ openstack_tag }}"
 
-gnocchi_api_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/gnocchi-api"
+gnocchi_api_image: "{{ docker_image_url }}gnocchi-api"
 gnocchi_api_tag: "{{ gnocchi_tag }}"
 gnocchi_api_image_full: "{{ gnocchi_api_image }}:{{ gnocchi_api_tag }}"
 
-gnocchi_statsd_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/gnocchi-statsd"
+gnocchi_statsd_image: "{{ docker_image_url }}gnocchi-statsd"
 gnocchi_statsd_tag: "{{ gnocchi_tag }}"
 gnocchi_statsd_image_full: "{{ gnocchi_statsd_image }}:{{ gnocchi_statsd_tag }}"
 
-gnocchi_metricd_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/gnocchi-metricd"
+gnocchi_metricd_image: "{{ docker_image_url }}gnocchi-metricd"
 gnocchi_metricd_tag: "{{ gnocchi_tag }}"
 gnocchi_metricd_image_full: "{{ gnocchi_metricd_image }}:{{ gnocchi_metricd_tag }}"
 
@@ -99,7 +102,11 @@ gnocchi_api_enable_healthchecks: "{{ enable_container_healthchecks }}"
 gnocchi_api_healthcheck_interval: "{{ default_container_healthcheck_interval }}"
 gnocchi_api_healthcheck_retries: "{{ default_container_healthcheck_retries }}"
 gnocchi_api_healthcheck_start_period: "{{ default_container_healthcheck_start_period }}"
-gnocchi_api_healthcheck_test: ["CMD-SHELL", "healthcheck_curl http://{{ api_interface_address | put_address_in_context('url') }}:{{ gnocchi_api_listen_port }}"]
+gnocchi_api_healthcheck_test:
+  - "CMD-SHELL"
+  - >-
+    healthcheck_curl http://{{
+    api_interface_address | put_address_in_context('url') }}:{{ gnocchi_api_listen_port }}/healthcheck
 gnocchi_api_healthcheck_timeout: "{{ default_container_healthcheck_timeout }}"
 gnocchi_api_healthcheck:
   interval: "{{ gnocchi_api_healthcheck_interval }}"
@@ -136,22 +143,16 @@ gnocchi_statsd_healthcheck:
 
 gnocchi_api_default_volumes:
   - "{{ node_config_directory }}/gnocchi-api/:{{ container_config_directory }}/:ro"
-  - "/etc/localtime:/etc/localtime:ro"
-  - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "{{ gnocchi_metric_datadir_volume }}:/var/lib/gnocchi/"
   - "kolla_logs:/var/log/kolla/"
 
 gnocchi_metricd_default_volumes:
   - "{{ node_config_directory }}/gnocchi-metricd/:{{ container_config_directory }}/:ro"
-  - "/etc/localtime:/etc/localtime:ro"
-  - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "{{ gnocchi_metric_datadir_volume }}:/var/lib/gnocchi/"
   - "kolla_logs:/var/log/kolla/"
 
 gnocchi_statsd_default_volumes:
   - "{{ node_config_directory }}/gnocchi-statsd/:{{ container_config_directory }}/:ro"
-  - "/etc/localtime:/etc/localtime:ro"
-  - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "{{ gnocchi_metric_datadir_volume }}:/var/lib/gnocchi/"
   - "kolla_logs:/var/log/kolla/"
 
@@ -163,9 +164,6 @@ gnocchi_statsd_extra_volumes: "{{ gnocchi_extra_volumes }}"
 ####################
 # OpenStack
 ####################
-gnocchi_internal_endpoint: "{{ gnocchi_internal_fqdn | kolla_url(internal_protocol, gnocchi_api_port) }}"
-gnocchi_public_endpoint: "{{ gnocchi_external_fqdn | kolla_url(public_protocol, gnocchi_api_public_port) }}"
-
 gnocchi_logging_debug: "{{ openstack_logging_debug }}"
 
 gnocchi_metricd_workers: "{{ openstack_service_workers }}"
@@ -194,3 +192,11 @@ gnocchi_ks_users:
     role: "admin"
 
 gnocchi_ceph_cluster: "ceph"
+
+# Database
+gnocchi_database_enable_tls_internal: "{{ database_enable_tls_internal | bool }}"
+
+###################
+# Copy certificates
+###################
+gnocchi_copy_certs: "{{ kolla_copy_ca_into_containers | bool or gnocchi_database_enable_tls_internal | bool }}"

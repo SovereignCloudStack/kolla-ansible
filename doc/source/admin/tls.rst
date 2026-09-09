@@ -48,10 +48,10 @@ APIs, configure the following in ``globals.yml``:
 
 .. code-block:: yaml
 
-  kolla_enable_tls_internal: "yes"
-  kolla_enable_tls_external: "yes"
-  kolla_enable_tls_backend: "yes"
-  kolla_copy_ca_into_containers: "yes"
+  kolla_enable_tls_internal: true
+  kolla_enable_tls_external: true
+  kolla_enable_tls_backend: true
+  kolla_copy_ca_into_containers: true
 
 If deploying on Debian or Ubuntu:
 
@@ -59,7 +59,7 @@ If deploying on Debian or Ubuntu:
 
   openstack_cacert: "/etc/ssl/certs/ca-certificates.crt"
 
-If on CentOS or Rocky:
+If on Rocky:
 
 .. code-block:: yaml
 
@@ -72,7 +72,7 @@ using the ``multinode`` inventory:
 
 .. code-block:: console
 
-  kolla-ansible -i ~/multinode certificates
+  kolla-ansible certificates -i ~/multinode
 
 TLS Configuration for internal/external VIP
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -80,10 +80,10 @@ TLS Configuration for internal/external VIP
 The configuration variables that control TLS for the internal and/or external
 VIP are:
 
-- ``kolla_enable_tls_external``
-- ``kolla_enable_tls_internal``
-- ``kolla_internal_fqdn_cert``
-- ``kolla_external_fqdn_cert``
+* ``kolla_enable_tls_external``
+* ``kolla_enable_tls_internal``
+* ``kolla_internal_fqdn_cert``
+* ``kolla_external_fqdn_cert``
 
 .. note::
 
@@ -100,13 +100,13 @@ encryption:
 
 .. code-block:: yaml
 
-  kolla_enable_tls_external: "yes"
+  kolla_enable_tls_external: true
 
 To enable internal TLS encryption:
 
 .. code-block:: yaml
 
-  kolla_enable_tls_internal: "yes"
+  kolla_enable_tls_internal: true
 
 Two certificate files are required to use TLS securely with authentication,
 which will be provided by your Certificate Authority:
@@ -185,12 +185,12 @@ file is named ``internal.crt``, it will be named
 For Debian and Ubuntu containers, the certificate files will be copied to the
 ``/usr/local/share/ca-certificates/`` directory.
 
-For CentOS and Rocky containers, the certificate files will be copied to the
+For Rocky containers, the certificate files will be copied to the
 ``/etc/pki/ca-trust/source/anchors/`` directory.
 
 In both cases, valid certificates will be added to the system trust store -
 ``/etc/ssl/certs/ca-certificates.crt`` on Debian and Ubuntu, and
-``/etc/pki/tls/certs/ca-bundle.crt`` on CentOS and Rocky.
+``/etc/pki/tls/certs/ca-bundle.crt`` on Rocky.
 
 Configuring a CA bundle
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -205,7 +205,7 @@ To use the system trust store on Debian or Ubuntu:
 
    openstack_cacert: /etc/ssl/certs/ca-certificates.crt
 
-For CentOS or Rocky:
+For Rocky:
 
 .. code-block:: yaml
 
@@ -218,28 +218,38 @@ Enabling TLS on the backend services secures communication between the
 HAProxy listing on the internal/external VIP and the OpenStack
 services. It also enables secure end-to-end communication between OpenStack
 services that support TLS termination. The OpenStack services that support
-backend TLS termination in Victoria are: Nova, Ironic, Neutron, Keystone,
-Glance, Heat, Placement, Horizon, Barbican, and Cinder.
+backend TLS termination are:
+
+* Barbican
+* Cinder
+* Glance
+* Heat
+* Horizon
+* Ironic
+* Keystone
+* Neutron
+* Nova
+* Placement
 
 The configuration variables that control back-end TLS for service endpoints
 are:
 
-- ``kolla_enable_tls_backend``
-- ``kolla_tls_backend_cert``
-- ``kolla_tls_backend_key``
-- ``haproxy_backend_cacert``
-- ``haproxy_backend_cacert_dir``
+* ``kolla_enable_tls_backend``
+* ``kolla_tls_backend_cert``
+* ``kolla_tls_backend_key``
+* ``haproxy_backend_cacert``
+* ``haproxy_backend_cacert_dir``
 
 The default state for back-end TLS is disabled. To enable TLS for the back-end
 communication:
 
 .. code-block:: yaml
 
-  kolla_enable_tls_backend: "yes"
+  kolla_enable_tls_backend: true
 
 It is also possible to enable back-end TLS on a per-service basis. For example,
 to enable back-end TLS for Keystone, set ``keystone_enable_tls_backend`` to
-``yes``.
+``true``.
 
 The default values for ``haproxy_backend_cacert`` and
 ``haproxy_backend_cacert_dir`` should suffice if the certificate is in the
@@ -284,9 +294,7 @@ disable verification of the backend certificate:
 
 .. code-block:: yaml
 
-  kolla_verify_tls_backend: "no"
-
-.. _admin-tls-generating-a-private-ca:
+  kolla_verify_tls_backend: false
 
 Generating TLS certificates with Let's Encrypt
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -299,7 +307,7 @@ must be configured in ``globals.yml``:
 
 .. code-block:: yaml
 
-  enable_letsencrypt: "yes"
+  enable_letsencrypt: true
   letsencrypt_email: "<The email used for registration and recovery contact>"
 
 The Let's Encrypt container will attempt to renew your certificates every 12
@@ -308,7 +316,7 @@ to the HAProxy containers using SSH.
 
 .. note::
 
-  If ``letsencrypt_email`` is not valid email, letsencrypt role will
+  If ``letsencrypt_email`` is not a valid email, the ``letsencrypt`` role will
   not work correctly.
 
 .. note::
@@ -316,6 +324,30 @@ to the HAProxy containers using SSH.
   If ``enable_letsencrypt`` is set to true, haproxy's socket will run with
   admin access level. This is needed so Let's Encrypt can interact
   with HAProxy.
+
+You can configure separate ACME servers for internal and external
+certificate requests by setting server URL on
+``letsencrypt_internal_cert_server`` and
+``letsencrypt_external_cert_server`` respectively.
+The default is external certificate ACME server set to
+``https://acme-v02.api.letsencrypt.org/directory``.
+
+.. list-table:: Let's Encrypt management
+   :widths: 28 72
+   :header-rows: 1
+
+   * - Desired outcome
+     - Settings
+   * - External only (default)
+     - Enable Let's Encrypt; no further changes.
+   * - External + internal
+     - Set ``letsencrypt_internal_cert_server`` and ensure it is reachable
+       from the controller.
+   * - Internal only
+     - Set ``letsencrypt_external_cert_server: ""`` and set
+       ``letsencrypt_internal_cert_server``.
+
+.. _admin-tls-generating-a-private-ca:
 
 Generating a Private Certificate Authority
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -337,7 +369,7 @@ configuration file and the inventory file:
 
 .. code-block:: console
 
-  kolla-ansible -i multinode certificates
+  kolla-ansible certificates -i multinode
 
 The ``certificates`` role performs the following actions:
 
@@ -363,3 +395,29 @@ options for TLS as is.
 
 If using this option, make sure that all certificates are present on the
 appropriate hosts in the appropriate location.
+
+.. _haproxy-tls-settings:
+
+HAProxy TLS related settings
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+You can select between different SSL/TLS ciphers by setting the following
+in ``/etc/kolla/globals.yml``:
+
+.. code-block:: yaml
+
+   kolla_haproxy_ssl_settings: "modern" # or "intermediate" or "legacy"
+
+The default value is "modern". These settings are adapted from the
+`Mozilla SSL Configuration Generator <https://ssl-config.mozilla.org/>`__.
+
+The setting "modern" is recommended for most deployments. The setting
+"intermediate" is recommended for deployments that need to support older
+clients. The setting "legacy" is not recommended, but is left as a
+compatibility option for older deployments.
+
+See the `Mozilla SSL Configuration Generator <https://ssl-config.mozilla.org/>`__
+for more information on exact supported client versions.
+
+The ``kolla_haproxy_ssl_settings`` setting also affects the glance and
+neutron haproxy TLS settings, if these proxy services are enabled.

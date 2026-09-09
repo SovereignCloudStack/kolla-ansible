@@ -1,18 +1,18 @@
 [DEFAULT]
 debug = {{ placement_logging_debug }}
 
-log_dir = /var/log/kolla/placement
+log_file = /var/log/kolla/placement/{{ service_name }}.log
 
 state_path = /var/lib/placement
 
 [oslo_middleware]
-enable_proxy_headers_parsing = True
+enable_proxy_headers_parsing = true
 
 [oslo_concurrency]
 lock_path = /var/lib/placement/tmp
 
 [placement_database]
-connection = mysql+pymysql://{{ placement_database_user }}:{{ placement_database_password }}@{{ placement_database_address }}/{{ placement_database_name }}
+connection = mysql+pymysql://{{ placement_database_user }}:{{ placement_database_password }}@{{ placement_database_address }}/{{ placement_database_name }}{{ '?ssl_ca=' ~ openstack_cacert if placement_database_enable_tls_internal | bool }}
 connection_recycle_time = {{ database_connection_recycle_time }}
 max_overflow = 1000
 max_pool_size = {{ database_max_pool_size }}
@@ -20,13 +20,13 @@ max_retries = -1
 
 [cache]
 backend = oslo_cache.memcache_pool
-enabled = True
+enabled = true
 memcache_servers = {% for host in groups['memcached'] %}{{ 'api' | kolla_address(host) | put_address_in_context('memcache') }}:{{ memcached_port }}{% if not loop.last %},{% endif %}{% endfor %}
 
 
 [keystone_authtoken]
 service_type = placement
-www_authenticate_uri = {{ keystone_internal_url }}
+www_authenticate_uri = {{ keystone_public_url }}
 auth_url = {{ keystone_internal_url }}
 auth_type = password
 project_domain_id = {{ default_project_domain_id }}
@@ -37,7 +37,7 @@ password = {{ placement_keystone_password }}
 cafile = {{ openstack_cacert }}
 region_name = {{ openstack_region_name }}
 
-memcache_security_strategy = ENCRYPT
+memcache_security_strategy = {{ memcache_security_strategy }}
 memcache_secret_key = {{ memcache_secret_key }}
 memcached_servers = {% for host in groups['memcached'] %}{{ 'api' | kolla_address(host) | put_address_in_context('memcache') }}:{{ memcached_port }}{% if not loop.last %},{% endif %}{% endfor %}
 

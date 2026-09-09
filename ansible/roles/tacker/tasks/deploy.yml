@@ -1,15 +1,20 @@
 ---
-- import_tasks: register.yml
+- name: Register tacker in Keystone
+  ansible.builtin.import_tasks: register.yml
 
-- import_tasks: config.yml
+- name: Configure tacker
+  ansible.builtin.import_tasks: config.yml
 
-- import_tasks: check-containers.yml
+- name: Check tacker containers
+  ansible.builtin.import_tasks: check-containers.yml
 
-- include_tasks: clone.yml
+- name: Clone tacker repository
+  ansible.builtin.include_tasks: clone.yml
   when:
     - tacker_dev_mode | bool
 
-- import_tasks: bootstrap.yml
+- name: Bootstrap tacker service
+  ansible.builtin.import_tasks: bootstrap.yml
 
 - name: Flush handlers
-  meta: flush_handlers
+  ansible.builtin.meta: flush_handlers

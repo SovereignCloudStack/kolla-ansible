@@ -19,9 +19,9 @@ Host machine requirements
 
 The host machine must satisfy the following minimum requirements:
 
-- 2 network interfaces
-- 8GB main memory
-- 40GB disk space
+* 2 network interfaces
+* 8GB main memory
+* 40GB disk space
 
 See the :kolla-ansible-doc:`support matrix <user/support-matrix>` for details
 of supported host Operating Systems. Kolla Ansible supports the default Python
@@ -48,7 +48,7 @@ execution, which is described in
 
 #. Install Python build dependencies:
 
-   For CentOS, Rocky or openEuler, run:
+   For Rocky, run:
 
    .. code-block:: console
 
@@ -58,14 +58,14 @@ execution, which is described in
 
    .. code-block:: console
 
-      sudo apt install git python3-dev libffi-dev gcc libssl-dev
+      sudo apt install git python3-dev libffi-dev gcc libssl-dev libdbus-glib-1-dev
 
 Install dependencies for the virtual environment
 ------------------------------------------------
 
 #. Install the virtual environment dependencies.
 
-   For CentOS, Rocky or openEuler, you don't need to do anything.
+   For Rocky, you don't need to do anything.
 
    For Debian or Ubuntu, run:
 
@@ -88,14 +88,6 @@ Install dependencies for the virtual environment
    .. code-block:: console
 
       pip install -U pip
-
-#. Install `Ansible <http://www.ansible.com>`__. Kolla Ansible requires at least
-   Ansible ``6`` (or ansible-core ``2.14``) and supports up to ``7`` (or
-   ansible-core ``2.15``).
-
-   .. code-block:: console
-
-      pip install 'ansible-core>=2.14,<2.16'
 
 
 Install Kolla-ansible
@@ -180,12 +172,11 @@ There are a few options that are required to deploy Kolla Ansible:
 
   Kolla provides choice of several Linux distributions in containers:
 
-  - CentOS Stream (``centos``)
   - Debian (``debian``)
   - Rocky (``rocky``)
   - Ubuntu (``ubuntu``)
 
-  For newcomers, we recommend to use Rocky Linux 9 or Ubuntu 22.04.
+  For newcomers, we recommend to use Rocky Linux 10 or Ubuntu 24.04.
 
   .. code-block:: console
 
@@ -243,11 +234,11 @@ There are a few options that are required to deploy Kolla Ansible:
 
   By default Kolla Ansible provides a bare compute kit, however it does provide
   support for a vast selection of additional services. To enable them, set
-  ``enable_*`` to "yes".
+  ``enable_*`` to ``true``.
 
   Kolla now supports many OpenStack services, there is
   `a list of available services
-  <https://github.com/openstack/kolla-ansible/blob/master/README.rst#openstack-services>`_.
+  <https://opendev.org/openstack/kolla-ansible/src/branch/|KOLLA_BRANCH_NAME|/README.rst#openstack-services>`_.
   For more information about service configuration, Please refer to the
   :kolla-ansible-doc:`Services Reference Guide <reference/index.html>`.
 
@@ -269,7 +260,7 @@ There are a few options that are required to deploy Kolla Ansible:
 * Virtual environment
 
   It is recommended to use a virtual environment to execute tasks on the remote
-  hosts.  This is covered
+  hosts.  This is covered in
   :kolla-ansible-doc:`Virtual Environments <user/virtual-environments.html>`.
 
 Deployment
@@ -289,19 +280,19 @@ accordingly.
 
    .. code-block:: console
 
-      kolla-ansible -i ./all-in-one bootstrap-servers
+      kolla-ansible bootstrap-servers -i ./all-in-one
 
 #. Do pre-deployment checks for hosts:
 
    .. code-block:: console
 
-      kolla-ansible -i ./all-in-one prechecks
+      kolla-ansible prechecks -i ./all-in-one
 
 #. Finally proceed to actual OpenStack deployment:
 
    .. code-block:: console
 
-      kolla-ansible -i ./all-in-one deploy
+      kolla-ansible deploy -i ./all-in-one
 
 When this playbook finishes, OpenStack should be up, running and functional!
 If error occurs during execution, refer to

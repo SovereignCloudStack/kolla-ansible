@@ -1,2 +1,3 @@
 ---
-- import_tasks: deploy.yml
+- name: Deploy ceph-rgw
+  ansible.builtin.import_tasks: deploy.yml

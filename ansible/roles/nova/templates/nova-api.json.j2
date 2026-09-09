@@ -1,7 +1,5 @@
-{% set apache_binary = 'apache2' if kolla_base_distro in ['ubuntu', 'debian'] else 'httpd' %}
-{% set apache_conf_dir = 'apache2/conf-enabled' if kolla_base_distro in ['ubuntu', 'debian'] else 'httpd/conf.d' %}
 {
-    "command": "/usr/sbin/{{ apache_binary }} -DFOREGROUND",
+    "command": "uwsgi /etc/nova/nova-api-uwsgi.ini",
     "config_files": [
         {
             "source": "{{ container_config_directory }}/nova.conf",
@@ -10,8 +8,8 @@
             "perm": "0600"
         },
         {
-            "source": "{{ container_config_directory }}/nova-api-wsgi.conf",
-            "dest": "/etc/{{ apache_conf_dir }}/nova-api-wsgi.conf",
+            "source": "{{ container_config_directory }}/nova-api-uwsgi.ini",
+            "dest": "/etc/nova/nova-api-uwsgi.ini",
             "owner": "nova",
             "perm": "0600"
         }{% if nova_policy_file is defined %},
@@ -38,13 +36,31 @@
             "dest": "/etc/nova/vendordata.json",
             "owner": "nova",
             "perm": "0600"
+        }{% endif %}{% if kolla_copy_ca_into_containers | bool %},
+        {
+            "source": "{{ container_config_directory }}/ca-certificates",
+            "dest": "/var/lib/kolla/share/ca-certificates",
+            "owner": "root",
+            "perm": "0644"
         }{% endif %}
+    ],
+    "directories": [
+        {
+            "path": "/var/log/kolla",
+            "owner": "fluentd:kolla",
+            "perm": "2775"
+        },
+        {
+            "path": "/var/log/kolla/nova",
+            "owner": "nova:kolla",
+            "perm": "2775"
+        }
     ],
     "permissions": [
         {
-            "path": "/var/log/kolla/nova",
-            "owner": "nova:nova",
-            "recurse": true
+            "path": "/var/log/kolla/nova/*.log",
+            "owner": "nova:kolla",
+            "perm": "0664"
         }
     ]
 }

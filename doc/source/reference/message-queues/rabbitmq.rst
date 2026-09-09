@@ -23,7 +23,6 @@ Encryption of the following channels is not currently supported:
 
 * RabbitMQ cluster traffic between RabbitMQ server nodes
 * RabbitMQ CLI communication with RabbitMQ server nodes
-* RabbitMQ Management API and UI (backend connection from HAProxy to RabbitMQ)
 
 Client-server
 -------------
@@ -113,29 +112,35 @@ https://www.rabbitmq.com/runtime.html#busy-waiting.
 High Availability
 ~~~~~~~~~~~~~~~~~
 
-RabbitMQ offers two features that, when used together, allow for high
-availability. These are durable queues and classic queue mirroring. Setting the
-flag ``om_enable_rabbitmq_high_availability`` to ``true`` will enable both of
-these features. There are some queue types which are intentionally not mirrored
-using the exclusionary pattern ``^(?!(amq\\.)|(.*_fanout_)|(reply_)).*``.
+With the release of RabbitMQ 4.0, all queues are highly available as they are
+configured to be quorum queues by default. RabbitMQ also offer queues called
+streams, which can be used to replace "fanout" queues with a more performant
+alternative. This is enabled by default, but can be disabled by setting
+``om_enable_rabbitmq_stream_fanout: false``. When changing queues to a
+different type, the follow procedure will be needed.
 
-After enabling this value on a running system, there are some additional steps
-needed to migrate from transient to durable queues.
+.. warning::
 
-1. Stop all OpenStack services which use RabbitMQ, so that they will not
+   Since the default changed to have all queues be of durable type in the Epoxy
+   release, following procedure is required to be carried out before any
+   upgrade to Epoxy.
+
+1. Generate the new config for all services. After this, make sure not to
+   restart any containers until after the RabbitMQ state has been reset.
+
+   .. code-block:: console
+
+      kolla-ansible genconfig
+
+2. Stop all OpenStack services which use RabbitMQ, so that they will not
    attempt to recreate any queues yet.
 
    .. code-block:: console
 
       kolla-ansible stop --tags <service-tags>
 
-2. Generate the new config for all services.
-
-   .. code-block:: console
-
-      kolla-ansible genconfig
-
-3. Reconfigure RabbitMQ.
+3. Reconfigure RabbitMQ if you were previously using
+   ``om_enable_rabbitmq_high_availability``.
 
    .. code-block:: console
 
@@ -154,3 +159,84 @@ needed to migrate from transient to durable queues.
    .. code-block:: console
 
       kolla-ansible deploy --tags <service-tags>
+
+
+Upgrading RabbitMQ
+~~~~~~~~~~~~~~~~~~
+
+RabbitMQ upgrades in Kolla Ansible are typically restricted to a single minor
+version increment at a time (e.g., from 4.0.x to 4.1.x). This is a safety
+measure to ensure that RabbitMQ's internal data migrations and feature flags
+are processed correctly.
+
+In some cases, specific multi-version upgrade paths are supported (for example,
+jumping from 3.13 directly to 4.2). These allowed paths are defined
+using the ``rabbitmq_allowed_upgrades`` variable in the RabbitMQ role defaults.
+
+Operators can customize or extend these allowed upgrade paths by overriding
+this variable in ``globals.yml``.
+
+.. code-block:: yaml
+
+   rabbitmq_allowed_upgrades:
+     "3.13":
+       - "4.0"
+       - "4.1"
+       - "4.2"
+     "4.0":
+       - "4.1"
+       - "4.2"
+
+If an invalid upgrade path is detected, the deployment will fail with a
+descriptive error message during the ``rabbitmq-version-check`` task,
+suggesting the next appropriate intermediate version.
+
+Handling Stream Replicas
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+RabbitMQ streams are expected to be replicated across the nodes in the
+cluster. However, RabbitMQ itself will only create replicas of a stream when
+the stream is initially declared. This means that any streams declared when a
+RabbitMQ node is out of service must be explicitly managed by an operator.
+RabbitMQ documents how to manage stream replicas here:
+https://www.rabbitmq.com/docs/streams#member-management
+
+An example script to create any missing stream replicas can be found under
+`kolla-ansible/contrib/ops/rabbitmq/rabbitmq-repair-stream-replicas.sh
+<https://opendev.org/openstack/kolla-ansible/src/branch/master/contrib/ops/rabbitmq/rabbitmq-repair-stream-replicas.sh>`__.
+This should be executed from a host running the RabbitMQ container.
+Currently, membership changes for streams `is not entirely safe
+<https://github.com/rabbitmq/rabbitmq-server/discussions/14246>`__, so this
+script should only be used when the RabbitMQ cluster is in a known healthy
+state.
+
+Streams Retention Period
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+When using RabbitMQ streams for fanout queues by setting
+``om_enable_rabbitmq_stream_fanout: true``, users can set retention policy for
+them with the use of two variables ``rabbitmq_stream_max_segment_size_bytes``
+and ``rabbitmq_stream_segment_max_age`` to avoid running out of disk space
+eventually.
+
+Default configuration set segments of a stream queues to have maximum size of
+500 MB (`RabbitMQ default <https://www.rabbitmq.com/docs/streams#declaring>`__)
+and the retention time of 1800 seconds once a segment reaches the maximum size
+(`oslo.messaging default
+<https://docs.openstack.org/oslo.messaging/latest/configuration/opts.html#oslo_messaging_rabbit.rabbit_transient_queues_ttl>`__).
+These default values will leave large number of ready messages in stream
+queues even though old ones are removed by the retention policy.
+So it is recommended to tune them based on how busy the cloud is.
+
+``rabbitmq_stream_max_segment_size_bytes`` sets the maximum size of stream
+segments. This variable needs to be positive integer.
+
+``rabbitmq_stream_segment_max_age`` sets the retention time of segments that
+reached the maximum size. This variable needs to be string with valid options
+of Y, M, D, h, m, s (e.g. 24h for 24 hours).
+
+.. code-block:: yaml
+
+   # Example custom retention policy configuration
+   rabbitmq_stream_max_segment_size_bytes: 5000 # 5 KB
+   rabbitmq_stream_segment_max_age: "60s" # 60 seconds

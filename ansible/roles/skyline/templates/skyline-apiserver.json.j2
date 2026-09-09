@@ -24,13 +24,31 @@
             "dest": "/etc/skyline/certs/skyline-key.pem",
             "owner": "skyline",
             "perm": "0600"
+        }{% endif %}{% if kolla_copy_ca_into_containers | bool %},
+        {
+            "source": "{{ container_config_directory }}/ca-certificates",
+            "dest": "/var/lib/kolla/share/ca-certificates",
+            "owner": "root",
+            "perm": "0644"
         }{% endif %}
-        ],
-    "permissions": [
+    ],
+    "directories": [
+        {
+            "path": "/var/log/kolla",
+            "owner": "fluentd:kolla",
+            "perm": "2775"
+        },
         {
             "path": "/var/log/kolla/skyline",
-            "owner": "skyline:skyline",
-            "recurse": true
+            "owner": "skyline:kolla",
+            "perm": "2775"
+        }
+    ],
+    "permissions": [
+        {
+            "path": "/var/log/kolla/skyline/*.log",
+            "owner": "skyline:kolla",
+            "perm": "0664"
         }
     ]
 }

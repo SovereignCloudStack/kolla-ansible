@@ -1,5 +1,6 @@
 ---
-- import_role:
+- name: Precheck cyborg configuration
+  ansible.builtin.import_role:
     name: service-precheck
   vars:
     service_precheck_services: "{{ cyborg_services }}"
@@ -8,6 +9,7 @@
 - name: Get container facts
   become: true
   kolla_container_facts:
+    action: get_containers
     container_engine: "{{ kolla_container_engine }}"
     name:
       - cyborg_api
@@ -15,12 +17,12 @@
   register: container_facts
 
 - name: Checking free port for cyborg API
-  wait_for:
+  ansible.builtin.wait_for:
     host: "{{ api_interface_address }}"
     port: "{{ cyborg_api_port }}"
     connect_timeout: 1
     timeout: 1
     state: stopped
   when:
-    - container_facts['cyborg_api'] is not defined
+    - container_facts.containers['cyborg_api'] is not defined
     - inventory_hostname in groups['cyborg-api']

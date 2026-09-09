@@ -8,17 +8,12 @@ set -o pipefail
 export PYTHONUNBUFFERED=1
 
 function test_ovn {
-    # NOTE(yoctozepto): could use real ini parsing but this is fine for now
-    local neutron_ml2_conf_path=/etc/kolla/neutron-server/ml2_conf.ini
-    ovn_nb_connection=$(sudo grep -P -o -e "(?<=^ovn_nb_connection = ).*" "$neutron_ml2_conf_path")
-    ovn_sb_connection=$(sudo grep -P -o -e "(?<=^ovn_sb_connection = ).*" "$neutron_ml2_conf_path")
-
     # List OVN NB/SB entries
     echo "OVN NB DB entries:"
-    sudo ${container_engine} exec ovn_northd ovn-nbctl --db "$ovn_nb_connection" show
+    sudo ${container_engine} exec ovn_northd ovn-nbctl show
 
     echo "OVN SB DB entries:"
-    sudo ${container_engine} exec ovn_northd ovn-sbctl --db "$ovn_sb_connection" show
+    sudo ${container_engine} exec ovn_northd ovn-sbctl show
 
     OVNNB_STATUS=$(sudo ${container_engine} exec ovn_nb_db ovs-appctl -t /var/run/ovn/ovnnb_db.ctl cluster/status OVN_Northbound)
     OVNSB_STATUS=$(sudo ${container_engine} exec ovn_sb_db ovs-appctl -t /var/run/ovn/ovnsb_db.ctl cluster/status OVN_Southbound)
@@ -34,6 +29,9 @@ function test_ovn {
         echo "Output: ${OVNSB_STATUS}"
         exit 1
     fi
+
+    echo "OVS entries"
+    sudo ${container_engine} exec openvswitch_vswitchd ovs-vsctl list open
 }
 
 function test_octavia {
@@ -44,7 +42,7 @@ function test_octavia {
     openstack loadbalancer list
 
     # Create a server to act as a backend
-    openstack server create --wait --image cirros --flavor m1.tiny --key-name mykey --network demo-net lb_member --wait
+    openstack server create --wait --image cirros --flavor c1.tiny --key-name mykey --network demo-net lb_member --wait
     member_fip=$(openstack floating ip create public1 -f value -c floating_ip_address)
     openstack server add floating ip lb_member ${member_fip}
     member_ip=$(openstack floating ip show ${member_fip} -f value -c fixed_ip_address)
@@ -74,13 +72,25 @@ function test_octavia {
     echo "Add a floating IP to the load balancer."
     lb_fip=$(openstack floating ip create public1 -f value -c name)
     lb_vip=$(openstack loadbalancer show test_ovn_lb -f value -c vip_address)
+    attempt=0
+    while [[ $(openstack port list --fixed-ip ip-address=$lb_vip -f value -c ID) == "" ]]; do
+        echo "Port for LB with VIP ip addr $lb_vip not available yet"
+        attempt=$((attempt+1))
+        if [[ $attempt -eq 10 ]]; then
+            echo "ERROR: Port for LB with VIP ip addr failed to become available"
+            openstack port list --fixed-ip ip-address=$lb_vip
+            return 1
+        fi
+        sleep $attempt
+    done
     lb_port_id=$(openstack port list --fixed-ip ip-address=$lb_vip -f value -c ID)
     openstack floating ip set $lb_fip --port $lb_port_id
 
     echo "OVN NB entries for LB:"
-    sudo ${container_engine} exec ovn_northd ovn-nbctl --db "$ovn_nb_connection" list load_balancer
+    sudo ${container_engine} exec ovn_northd ovn-nbctl list load_balancer
+
     echo "OVN NB entries for NAT:"
-    sudo ${container_engine} exec ovn_northd ovn-nbctl --db "$ovn_nb_connection" list nat
+    sudo ${container_engine} exec ovn_northd ovn-nbctl list nat
 
     echo "Attempt to access the load balanced HTTP server."
     attempts=12

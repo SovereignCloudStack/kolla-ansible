@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -45,6 +45,16 @@ def mergepwd(old, new, final, clean=False):
     if not isinstance(new_passwords, dict):
         print("ERROR: New passwords file not in expected key/value format")
         sys.exit(1)
+
+    # TODO(vurmil): Remove in H/2026.2 release as Redis migration is
+    # no longer required
+    if 'valkey_master_password' in new_passwords and \
+       'redis_master_password' in old_passwords and \
+       'valkey_master_password' not in old_passwords:
+
+        old_redis_pass = old_passwords.get('redis_master_password')
+        if old_redis_pass:
+            new_passwords['valkey_master_password'] = old_redis_pass
 
     if clean:
         # keep only new keys

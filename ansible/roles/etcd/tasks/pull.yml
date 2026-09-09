@@ -1,3 +1,4 @@
 ---
-- import_role:
+- name: Pull etcd images
+  ansible.builtin.import_role:
     role: service-images-pull

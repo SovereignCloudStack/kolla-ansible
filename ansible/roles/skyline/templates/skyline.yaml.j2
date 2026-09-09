@@ -2,20 +2,26 @@ default:
   access_token_expire: {{ skyline_access_token_expire_seconds }}
   access_token_renew: {{ skyline_access_token_renew_seconds }}
   cors_allow_origins: {{ skyline_backend_cors_origins }}
-  database_url: mysql://{{ skyline_database_user }}:{{ skyline_database_password }}@{{ skyline_database_address }}/{{ skyline_database_name }}
+  database_url: mysql+pymysql://{{ skyline_database_user }}:{{ skyline_database_password }}@{{ skyline_database_address }}/{{ skyline_database_name }}{{ '?ssl_ca=' ~ openstack_cacert if skyline_database_enable_tls_internal | bool }}
   debug: {{ skyline_logging_debug }}
   log_dir: {{ log_dir }}
+{% if enable_prometheus | bool  %}
+  prometheus_basic_auth_password: "{{ prometheus_skyline_password }}"
+  prometheus_basic_auth_user: "{{ prometheus_skyline_user }}"
+  prometheus_enable_basic_auth: true
+  prometheus_endpoint: "{{ prometheus_internal_endpoint }}"
+{% endif %}
   secret_key: {{ skyline_secret_key }}
   session_name: {{ skyline_session_name }}
 openstack:
 {% if skyline_base_domains_ignore | bool %}
   base_domains:
-{% if enable_heat | bool %}
+{%     if enable_heat | bool %}
   - heat_user_domain
-{% endif %}
-{% if enable_magnum | bool %}
+{%     endif %}
+{%     if enable_magnum | bool %}
   - magnum
-{% endif %}
+{%     endif %}
 {% endif %}
   default_region: {{ openstack_region_name }}
   extension_mapping:
@@ -38,20 +44,23 @@ openstack:
 {% if enable_nova | bool %}
     compute: nova
 {% endif %}
-{% if enable_zun | bool %}
-    container: zun
-{% endif %}
 {% if enable_magnum | bool %}
     container-infra: magnum
 {% endif %}
 {% if enable_trove | bool %}
     database: trove
 {% endif %}
+{% if enable_designate | bool %}
+    dns: designate
+{% endif %}
 {% if enable_keystone | bool %}
     identity: keystone
 {% endif %}
 {% if enable_glance | bool %}
     image: glance
+{% endif %}
+{% if enable_masakari | bool %}
+    instance-ha: masakari
 {% endif %}
 {% if enable_barbican | bool %}
     key-manager: barbican
@@ -62,7 +71,7 @@ openstack:
 {% if enable_neutron | bool %}
     network: neutron
 {% endif %}
-{% if enable_swift | bool %}
+{% if enable_ceph_rgw | bool or skyline_external_swift | bool %}
     object-store: swift
 {% endif %}
 {% if enable_heat | bool %}
@@ -75,7 +84,13 @@ openstack:
     sharev2: manilav2
 {% endif %}
 {% if enable_cinder | bool %}
-    volumev3: cinder
+    block-storage: cinder
+{% endif %}
+  sso_enabled: {{ skyline_enable_sso | bool }}
+{% if skyline_enable_sso | bool %}
+  sso_protocols:
+    - openid
+  sso_region: {{ openstack_region_name }}
 {% endif %}
   system_admin_roles:
 {% for skyline_system_admin_role in skyline_system_admin_roles %}

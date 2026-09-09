@@ -1,8 +1,8 @@
 ---
 - name: Pruning Kolla images
   become: true
-  docker_prune:
-    images: yes
+  community.docker.docker_prune:
+    images: true
     images_filters:
       label: kolla_version
     timeout: "{{ docker_image_prune_timeout }}"
@@ -12,5 +12,6 @@
 # and generic module podman_image does not support label filters
 - name: Pruning Kolla images
   become: true
-  command: podman image prune --force --filter 'label=kolla_version'
+  changed_when: true
+  ansible.builtin.command: podman image prune --force --filter 'label=kolla_version'
   when: kolla_container_engine == 'podman'

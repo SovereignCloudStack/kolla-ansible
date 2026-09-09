@@ -1,9 +1,12 @@
 ---
-- import_tasks: config.yml
+- name: Configure masakari
+  ansible.builtin.import_tasks: config.yml
 
-- import_tasks: check-containers.yml
+- name: Check masakari containers
+  ansible.builtin.import_tasks: check-containers.yml
 
-- import_tasks: bootstrap_service.yml
+- name: Run masakari bootstrap container
+  ansible.builtin.import_tasks: bootstrap_service.yml
 
 - name: Flush handlers
-  meta: flush_handlers
+  ansible.builtin.meta: flush_handlers

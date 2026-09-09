@@ -8,6 +8,7 @@ blazar_services:
     volumes: "{{ blazar_api_default_volumes + blazar_api_extra_volumes }}"
     dimensions: "{{ blazar_api_dimensions }}"
     healthcheck: "{{ blazar_api_healthcheck }}"
+    wsgi: "blazar.wsgi.api:application"
     haproxy:
       blazar_api:
         enabled: "{{ enable_blazar }}"
@@ -15,6 +16,11 @@ blazar_services:
         external: false
         port: "{{ blazar_api_port }}"
         listen_port: "{{ blazar_api_listen_port }}"
+        backend_http_extra:
+          ## All of Blazar's API endpoints are private.
+          ## So we should accept 401 as valid healthy response.
+          - "option httpchk"
+          - "http-check expect status 401"
       blazar_api_external:
         enabled: "{{ enable_blazar }}"
         mode: "http"
@@ -22,6 +28,11 @@ blazar_services:
         external_fqdn: "{{ blazar_external_fqdn }}"
         port: "{{ blazar_api_public_port }}"
         listen_port: "{{ blazar_api_listen_port }}"
+        backend_http_extra:
+          ## All of Blazar's API endpoints are private.
+          ## So we should accept 401 as valid healthy response.
+          - "option httpchk"
+          - "http-check expect status 401"
   blazar-manager:
     container_name: blazar_manager
     group: blazar-manager
@@ -60,8 +71,11 @@ blazar_database_shard:
   users:
     - user: "{{ blazar_database_user }}"
       password: "{{ blazar_database_password }}"
+      shard_id: "{{ blazar_database_shard_id }}"
   rules:
     - schema: "{{ blazar_database_name }}"
+      shard_id: "{{ blazar_database_shard_id }}"
+    - user: "{{ blazar_database_user }}"
       shard_id: "{{ blazar_database_shard_id }}"
 
 
@@ -70,11 +84,11 @@ blazar_database_shard:
 ####################
 blazar_tag: "{{ openstack_tag }}"
 
-blazar_manager_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/blazar-manager"
+blazar_manager_image: "{{ docker_image_url }}blazar-manager"
 blazar_manager_tag: "{{ blazar_tag }}"
 blazar_manager_image_full: "{{ blazar_manager_image }}:{{ blazar_manager_tag }}"
 
-blazar_api_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/blazar-api"
+blazar_api_image: "{{ docker_image_url }}blazar-api"
 blazar_api_tag: "{{ blazar_tag }}"
 blazar_api_image_full: "{{ blazar_api_image }}:{{ blazar_api_tag }}"
 
@@ -111,16 +125,14 @@ blazar_manager_healthcheck:
 
 blazar_api_default_volumes:
   - "{{ node_config_directory }}/blazar-api/:{{ container_config_directory }}/:ro"
-  - "/etc/localtime:/etc/localtime:ro"
-  - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "kolla_logs:/var/log/kolla/"
-  - "{{ kolla_dev_repos_directory ~ '/blazar/blazar:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/blazar' if blazar_dev_mode | bool else '' }}"
+  - "{{ '/dev/shm:/dev/shm' }}"
+  - "{{ kolla_dev_repos_directory ~ '/blazar:/dev-mode/blazar' if blazar_dev_mode | bool else '' }}"
 blazar_manager_default_volumes:
   - "{{ node_config_directory }}/blazar-manager/:{{ container_config_directory }}/:ro"
-  - "/etc/localtime:/etc/localtime:ro"
-  - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "kolla_logs:/var/log/kolla/"
-  - "{{ kolla_dev_repos_directory ~ '/blazar/blazar:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/blazar' if blazar_dev_mode | bool else '' }}"
+  - "{{ '/dev/shm:/dev/shm' }}"
+  - "{{ kolla_dev_repos_directory ~ '/blazar:/dev-mode/blazar' if blazar_dev_mode | bool else '' }}"
 
 blazar_extra_volumes: "{{ default_extra_volumes }}"
 blazar_api_extra_volumes: "{{ blazar_extra_volumes }}"
@@ -129,8 +141,8 @@ blazar_manager_extra_volumes: "{{ blazar_extra_volumes }}"
 ####################
 # OpenStack
 ####################
-blazar_internal_endpoint: "{{ blazar_internal_fqdn | kolla_url(internal_protocol, blazar_api_port, '/v1') }}"
-blazar_public_endpoint: "{{ blazar_external_fqdn | kolla_url(public_protocol, blazar_api_public_port, '/v1') }}"
+blazar_internal_endpoint: "{{ blazar_internal_base_endpoint }}/v1"
+blazar_public_endpoint: "{{ blazar_public_base_endpoint }}/v1"
 
 blazar_logging_debug: "{{ openstack_logging_debug }}"
 
@@ -138,6 +150,7 @@ blazar_keystone_user: "blazar"
 
 openstack_blazar_auth: "{{ openstack_auth }}"
 
+blazar_api_workers: "{{ openstack_service_workers }}"
 
 #####################
 ## Kolla
@@ -173,3 +186,11 @@ blazar_ks_users:
     user: "{{ blazar_keystone_user }}"
     password: "{{ blazar_keystone_password }}"
     role: "admin"
+
+# Database
+blazar_database_enable_tls_internal: "{{ database_enable_tls_internal | bool }}"
+
+###################
+# Copy certificates
+###################
+blazar_copy_certs: "{{ kolla_copy_ca_into_containers | bool or blazar_database_enable_tls_internal | bool }}"

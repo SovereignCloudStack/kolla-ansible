@@ -13,7 +13,7 @@ ovn_controller_services:
 ####################
 ovn_tag: "{{ openstack_tag }}"
 
-ovn_controller_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/ovn-controller"
+ovn_controller_image: "{{ docker_image_url }}ovn-controller"
 ovn_controller_tag: "{{ ovn_tag }}"
 ovn_controller_image_full: "{{ ovn_controller_image }}:{{ ovn_controller_tag }}"
 
@@ -22,7 +22,7 @@ ovn_controller_dimensions: "{{ default_container_dimensions }}"
 ovn_controller_default_volumes:
   - "{{ node_config_directory }}/ovn-controller/:{{ container_config_directory }}/:ro"
   - "/run/openvswitch:/run/openvswitch:shared"
-  - "/etc/localtime:/etc/localtime:ro"
+  - "/run/ovn:/run/ovn:shared"
   - "kolla_logs:/var/log/kolla/"
 
 ovn_controller_extra_volumes: "{{ default_extra_volumes }}"

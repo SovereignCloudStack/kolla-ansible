@@ -1,22 +1,19 @@
 ---
 - name: Ensuring config directories exist
   become: true
-  file:
+  ansible.builtin.file:
     path: "{{ node_config_directory }}/{{ item.key }}"
     state: "directory"
     owner: "{{ config_owner_user }}"
     group: "{{ config_owner_group }}"
     mode: "0770"
-  when:
-    - inventory_hostname in groups[item.value.group]
-    - item.value.enabled | bool
-  with_dict: "{{ placement_services }}"
+  with_dict: "{{ placement_services | select_services_enabled_and_mapped_to_host }}"
 
 - name: Check if policies shall be overwritten
-  stat:
+  ansible.builtin.stat:
     path: "{{ item }}"
   delegate_to: localhost
-  run_once: True
+  run_once: true
   register: placement_policy
   with_first_found:
     - files: "{{ supported_policy_format_list }}"
@@ -25,28 +22,24 @@
       skip: true
 
 - name: Set placement policy file
-  set_fact:
+  ansible.builtin.set_fact:
     placement_policy_file: "{{ placement_policy.results.0.stat.path | basename }}"
     placement_policy_file_path: "{{ placement_policy.results.0.stat.path }}"
   when:
-    - placement_policy.results
+    - placement_policy.results | length > 0
 
-- include_tasks: copy-certs.yml
+- name: Copying over TLS certificates
+  ansible.builtin.include_tasks: copy-certs.yml
   when:
-    - kolla_copy_ca_into_containers | bool or placement_enable_tls_backend | bool
+    - placement_copy_certs | bool
 
 - name: Copying over config.json files for services
   become: true
-  template:
+  ansible.builtin.template:
     src: "{{ item.key }}.json.j2"
     dest: "{{ node_config_directory }}/{{ item.key }}/config.json"
     mode: "0660"
-  when:
-    - inventory_hostname in groups[item.value.group]
-    - item.value.enabled | bool
-  with_dict: "{{ placement_services }}"
-  notify:
-    - "Restart {{ item.key }} container"
+  with_dict: "{{ placement_services | select_services_enabled_and_mapped_to_host }}"
 
 - name: Copying over placement.conf
   become: true
@@ -61,55 +54,41 @@
       - "{{ node_custom_config }}/placement/{{ inventory_hostname }}/placement.conf"
     dest: "{{ node_config_directory }}/{{ item.key }}/placement.conf"
     mode: "0660"
-  when:
-    - inventory_hostname in groups[item.value.group]
-    - item.value.enabled | bool
-  with_dict: "{{ placement_services }}"
-  notify:
-    - "Restart {{ item.key }} container"
+  with_dict: "{{ placement_services | select_services_enabled_and_mapped_to_host }}"
 
-- name: Copying over placement-api wsgi configuration
-  become: true
+- name: "Configure uWSGI for Placement"
+  ansible.builtin.include_role:
+    name: service-uwsgi-config
   vars:
+    project_services: "{{ placement_services }}"
     service: "{{ placement_services['placement-api'] }}"
-  template:
-    src: "{{ item }}"
-    dest: "{{ node_config_directory }}/placement-api/placement-api-wsgi.conf"
-    mode: "0660"
+    service_name: "placement-api"
+    service_uwsgi_config_http_port: "{{ placement_api_listen_port }}"
+    service_uwsgi_config_module: "{{ service.wsgi }}"
+    service_uwsgi_config_tls_backend: "{{ placement_enable_tls_backend | bool }}"
+    service_uwsgi_config_tls_cert: "/etc/placement/certs/placement-cert.pem"
+    service_uwsgi_config_tls_key: "/etc/placement/certs/placement-key.pem"
+    service_uwsgi_config_uid: "placement"
+    service_uwsgi_config_workers: "{{ placement_api_workers }}"
   when:
-    - inventory_hostname in groups[service.group]
-    - service.enabled | bool
-  with_first_found:
-    - "{{ node_custom_config }}/placement/{{ inventory_hostname }}/placement-api-wsgi.conf"
-    - "{{ node_custom_config }}/placement/placement-api-wsgi.conf"
-    - "placement-api-wsgi.conf.j2"
-  notify:
-    - Restart placement-api container
+    - service | service_enabled_and_mapped_to_host
 
 - name: Copying over migrate-db.rc.j2 configuration
   become: true
   vars:
     service: "{{ placement_services['placement-api'] }}"
-  template:
+  ansible.builtin.template:
     src: "migrate-db.rc.j2"
     dest: "{{ node_config_directory }}/placement-api/migrate-db.rc"
     mode: "0660"
-  when:
-    - inventory_hostname in groups[service.group]
-    - service.enabled | bool
-  notify:
-    - Restart placement-api container
+  when: service | service_enabled_and_mapped_to_host
 
 - name: Copying over existing policy file
   become: true
-  template:
+  ansible.builtin.template:
     src: "{{ placement_policy_file_path }}"
     dest: "{{ node_config_directory }}/{{ item.key }}/{{ placement_policy_file }}"
     mode: "0660"
   when:
-    - inventory_hostname in groups[item.value.group]
-    - item.value.enabled | bool
     - placement_policy_file is defined
-  with_dict: "{{ placement_services }}"
-  notify:
-    - "Restart {{ item.key }} container"
+  with_dict: "{{ placement_services | select_services_enabled_and_mapped_to_host }}"

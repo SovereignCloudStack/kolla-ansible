@@ -1,114 +1,162 @@
 ---
 - nodeset:
-    name: kolla-ansible-centos9s
+    name: kolla-ansible-debian-trixie-8GB
     nodes:
       - name: primary
-        label: centos-9-stream
+        label: debian-trixie-8GB
 
 - nodeset:
-    name: kolla-ansible-debian-bullseye
+    name: kolla-ansible-debian-trixie-16GB
     nodes:
       - name: primary
-        label: debian-bullseye
+        label: debian-trixie-16GB
 
 - nodeset:
-    name: kolla-ansible-debian-bookworm
+    name: kolla-ansible-debian-trixie-aarch64-8GB
     nodes:
       - name: primary
-        label: debian-bookworm
+        label: debian-trixie-arm64-8GB
 
 - nodeset:
-    name: kolla-ansible-debian-bullseye-aarch64
+    name: kolla-ansible-debian-trixie-aarch64-16GB
     nodes:
       - name: primary
-        label: debian-bullseye-arm64
+        label: debian-trixie-arm64-16GB
 
 - nodeset:
-    name: kolla-ansible-debian-bookworm-aarch64
+    name: kolla-ansible-debian-trixie-masakari-8GB
     nodes:
       - name: primary
-        label: debian-bookworm-arm64
-
-- nodeset:
-    name: kolla-ansible-jammy
-    nodes:
-      - name: primary
-        label: ubuntu-jammy
-
-- nodeset:
-    name: kolla-ansible-debian-bookworm-multi
-    nodes:
-      - name: primary
-        label: debian-bookworm
-      - name: secondary1
-        label: debian-bookworm
-      - name: secondary2
-        label: debian-bookworm
-
-- nodeset:
-    name: kolla-ansible-openeuler-22.03-lts
-    nodes:
-      - name: primary
-        label: openEuler-22-03-LTS
-
-- nodeset:
-    name: kolla-ansible-rocky9
-    nodes:
-      - name: primary
-        label: rockylinux-9
-
-- nodeset:
-    name: kolla-ansible-jammy-multi
-    nodes:
-      - name: primary
-        label: ubuntu-jammy
-      - name: secondary1
-        label: ubuntu-jammy
-      - name: secondary2
-        label: ubuntu-jammy
-
-- nodeset:
-    name: kolla-ansible-rocky9-multi
-    nodes:
-      - name: primary
-        label: rockylinux-9
-      - name: secondary1
-        label: rockylinux-9
-      - name: secondary2
-        label: rockylinux-9
-
-- nodeset:
-    name: kolla-ansible-jammy-nested-virt
-    nodes:
-      - name: primary
-        label: nested-virt-ubuntu-jammy
-
-- nodeset:
-    name: kolla-ansible-rocky9-nested-virt
-    nodes:
-      - name: primary
-        label: nested-virt-centos-9-stream
-
-- nodeset:
-    name: kolla-ansible-jammy-masakari
-    nodes:
-      - name: primary
-        label: ubuntu-jammy
+        label: debian-trixie-8GB
       - name: secondary
-        label: ubuntu-jammy
+        label: debian-trixie-8GB
       - name: ternary1
-        label: ubuntu-jammy
+        label: debian-trixie-8GB
       - name: ternary2
-        label: ubuntu-jammy
+        label: debian-trixie-8GB
 
 - nodeset:
-    name: kolla-ansible-rocky9-masakari
+    name: kolla-ansible-debian-trixie-multi-8GB
     nodes:
       - name: primary
-        label: rockylinux-9
+        label: debian-trixie-8GB
+      - name: secondary1
+        label: debian-trixie-8GB
+      - name: secondary2
+        label: debian-trixie-8GB
+
+- nodeset:
+    name: kolla-ansible-debian-trixie-multi-16GB
+    nodes:
+      - name: primary
+        label: debian-trixie-16GB
+      - name: secondary1
+        label: debian-trixie-16GB
+      - name: secondary2
+        label: debian-trixie-16GB
+
+- nodeset:
+    name: kolla-ansible-debian-trixie-nested-virt
+    nodes:
+      - name: primary
+        label: debian-trixie-nested-virt-8GB
+
+- nodeset:
+    name: kolla-ansible-rocky-10-8GB
+    nodes:
+      - name: primary
+        label: rockylinux-10-8GB
+
+- nodeset:
+    name: kolla-ansible-rocky-10-16GB
+    nodes:
+      - name: primary
+        label: rockylinux-10-16GB
+
+- nodeset:
+    name: kolla-ansible-rocky-10-masakari-8GB
+    nodes:
+      - name: primary
+        label: rockylinux-10-8GB
       - name: secondary
-        label: rockylinux-9
+        label: rockylinux-10-8GB
       - name: ternary1
-        label: rockylinux-9
+        label: rockylinux-10-8GB
       - name: ternary2
-        label: rockylinux-9
+        label: rockylinux-10-8GB
+
+- nodeset:
+    name: kolla-ansible-rocky-10-multi-8GB
+    nodes:
+      - name: primary
+        label: rockylinux-10-8GB
+      - name: secondary1
+        label: rockylinux-10-8GB
+      - name: secondary2
+        label: rockylinux-10-8GB
+
+- nodeset:
+    name: kolla-ansible-rocky-10-multi-16GB
+    nodes:
+      - name: primary
+        label: rockylinux-10-16GB
+      - name: secondary1
+        label: rockylinux-10-16GB
+      - name: secondary2
+        label: rockylinux-10-16GB
+
+- nodeset:
+    name: kolla-ansible-ubuntu-noble-8GB
+    nodes:
+      - name: primary
+        label: ubuntu-noble-8GB
+
+- nodeset:
+    name: kolla-ansible-ubuntu-noble-16GB
+    nodes:
+      - name: primary
+        label: ubuntu-noble-16GB
+
+- nodeset:
+    name: kolla-ansible-ubuntu-noble-aarch64-16GB
+    nodes:
+      - name: primary
+        label: ubuntu-noble-arm64-16GB
+
+- nodeset:
+    name: kolla-ansible-ubuntu-noble-multi-8GB
+    nodes:
+      - name: primary
+        label: ubuntu-noble-8GB
+      - name: secondary1
+        label: ubuntu-noble-8GB
+      - name: secondary2
+        label: ubuntu-noble-8GB
+
+- nodeset:
+    name: kolla-ansible-ubuntu-noble-multi-16GB
+    nodes:
+      - name: primary
+        label: ubuntu-noble-16GB
+      - name: secondary1
+        label: ubuntu-noble-16GB
+      - name: secondary2
+        label: ubuntu-noble-16GB
+
+- nodeset:
+    name: kolla-ansible-ubuntu-noble-nested-virt
+    nodes:
+      - name: primary
+        label: ubuntu-noble-nested-virt-8GB
+
+- nodeset:
+    name: kolla-ansible-ubuntu-noble-masakari-8GB
+    nodes:
+      - name: primary
+        label: ubuntu-noble-8GB
+      - name: secondary
+        label: ubuntu-noble-8GB
+      - name: ternary1
+        label: ubuntu-noble-8GB
+      - name: ternary2
+        label: ubuntu-noble-8GB

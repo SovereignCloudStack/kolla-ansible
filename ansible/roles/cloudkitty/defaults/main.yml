@@ -4,10 +4,11 @@ cloudkitty_services:
     container_name: "cloudkitty_api"
     group: "cloudkitty-api"
     image: "{{ cloudkitty_api_image_full }}"
-    enabled: True
+    enabled: true
     volumes: "{{ cloudkitty_api_default_volumes + cloudkitty_api_extra_volumes }}"
     dimensions: "{{ cloudkitty_api_dimensions }}"
     healthcheck: "{{ cloudkitty_api_healthcheck }}"
+    wsgi: "cloudkitty.wsgi.api:application"
     haproxy:
       cloudkitty_api:
         enabled: "{{ enable_cloudkitty }}"
@@ -15,6 +16,9 @@ cloudkitty_services:
         external: false
         port: "{{ cloudkitty_api_port }}"
         listen_port: "{{ cloudkitty_api_listen_port }}"
+        backend_http_extra:
+          - "option httpchk GET /healthcheck"
+          - "http-check expect status 200"
       cloudkitty_api_external:
         enabled: "{{ enable_cloudkitty }}"
         mode: "http"
@@ -22,11 +26,14 @@ cloudkitty_services:
         external_fqdn: "{{ cloudkitty_external_fqdn }}"
         port: "{{ cloudkitty_api_public_port }}"
         listen_port: "{{ cloudkitty_api_listen_port }}"
+        backend_http_extra:
+          - "option httpchk GET /healthcheck"
+          - "http-check expect status 200"
   cloudkitty-processor:
     container_name: "cloudkitty_processor"
     group: "cloudkitty-processor"
     image: "{{ cloudkitty_processor_image_full }}"
-    enabled: True
+    enabled: true
     volumes: "{{ cloudkitty_processor_default_volumes + cloudkitty_processor_extra_volumes }}"
     dimensions: "{{ cloudkitty_processor_dimensions }}"
     healthcheck: "{{ cloudkitty_processor_healthcheck }}"
@@ -54,8 +61,11 @@ cloudkitty_database_shard:
   users:
     - user: "{{ cloudkitty_database_user }}"
       password: "{{ cloudkitty_database_password }}"
+      shard_id: "{{ cloudkitty_database_shard_id }}"
   rules:
     - schema: "{{ cloudkitty_database_name }}"
+      shard_id: "{{ cloudkitty_database_shard_id }}"
+    - user: "{{ cloudkitty_database_user }}"
       shard_id: "{{ cloudkitty_database_shard_id }}"
 
 
@@ -64,11 +74,11 @@ cloudkitty_database_shard:
 ####################
 cloudkitty_tag: "{{ openstack_tag }}"
 
-cloudkitty_api_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/cloudkitty-api"
+cloudkitty_api_image: "{{ docker_image_url }}cloudkitty-api"
 cloudkitty_api_tag: "{{ cloudkitty_tag }}"
 cloudkitty_api_image_full: "{{ cloudkitty_api_image }}:{{ cloudkitty_api_tag }}"
 
-cloudkitty_processor_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/cloudkitty-processor"
+cloudkitty_processor_image: "{{ docker_image_url }}cloudkitty-processor"
 cloudkitty_processor_tag: "{{ cloudkitty_tag }}"
 cloudkitty_processor_image_full: "{{ cloudkitty_processor_image }}:{{ cloudkitty_processor_tag }}"
 
@@ -77,22 +87,24 @@ cloudkitty_api_dimensions: "{{ default_container_dimensions }}"
 
 cloudkitty_api_default_volumes:
   - "{{ node_config_directory }}/cloudkitty-api/:{{ container_config_directory }}/:ro"
-  - "/etc/localtime:/etc/localtime:ro"
-  - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "kolla_logs:/var/log/kolla/"
-  - "{{ kolla_dev_repos_directory ~ '/cloudkitty/cloudkitty:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/cloudkitty' if cloudkitty_dev_mode | bool else '' }}"
+  - "{{ '/dev/shm:/dev/shm' }}"
+  - "{{ kolla_dev_repos_directory ~ '/cloudkitty:/dev-mode/cloudkitty' if cloudkitty_dev_mode | bool else '' }}"
 cloudkitty_processor_default_volumes:
   - "{{ node_config_directory }}/cloudkitty-processor/:{{ container_config_directory }}/:ro"
-  - "/etc/localtime:/etc/localtime:ro"
-  - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "kolla_logs:/var/log/kolla/"
-  - "{{ kolla_dev_repos_directory ~ '/cloudkitty/cloudkitty:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/cloudkitty' if cloudkitty_dev_mode | bool else '' }}"
+  - "{{ '/dev/shm:/dev/shm' }}"
+  - "{{ kolla_dev_repos_directory ~ '/cloudkitty:/dev-mode/cloudkitty' if cloudkitty_dev_mode | bool else '' }}"
 
 cloudkitty_api_enable_healthchecks: "{{ enable_container_healthchecks }}"
 cloudkitty_api_healthcheck_interval: "{{ default_container_healthcheck_interval }}"
 cloudkitty_api_healthcheck_retries: "{{ default_container_healthcheck_retries }}"
 cloudkitty_api_healthcheck_start_period: "{{ default_container_healthcheck_start_period }}"
-cloudkitty_api_healthcheck_test: ["CMD-SHELL", "healthcheck_curl http://{{ api_interface_address | put_address_in_context('url') }}:{{ cloudkitty_api_port }}"]
+cloudkitty_api_healthcheck_test:
+  - "CMD-SHELL"
+  - >-
+    healthcheck_curl http://{{
+    api_interface_address | put_address_in_context('url') }}:{{ cloudkitty_api_port }}/healthcheck
 cloudkitty_api_healthcheck_timeout: "{{ default_container_healthcheck_timeout }}"
 cloudkitty_api_healthcheck:
   interval: "{{ cloudkitty_api_healthcheck_interval }}"
@@ -121,9 +133,6 @@ cloudkitty_api_extra_volumes: "{{ cloudkitty_extra_volumes }}"
 ####################
 # OpenStack
 ####################
-cloudkitty_internal_endpoint: "{{ cloudkitty_internal_fqdn | kolla_url(internal_protocol, cloudkitty_api_port) }}"
-cloudkitty_public_endpoint: "{{ cloudkitty_external_fqdn | kolla_url(public_protocol, cloudkitty_api_public_port) }}"
-
 cloudkitty_logging_debug: "{{ openstack_logging_debug }}"
 
 cloudkitty_keystone_user: "cloudkitty"
@@ -150,33 +159,28 @@ cloudkitty_custom_metrics_yaml_file: "metrics.yml"
 ####################
 # Storage backend
 ####################
-# InfluxDB retention policy to use (defaults to autogen).
-# cloudkitty_influxdb_retention_policy: "autogen"
-
-# Set to true to use SSL for InfluxDB connections.
-cloudkitty_influxdb_use_ssl: false
-
-# Path of the CA certificate to trust for HTTPS connections.
-# cloudkitty_influxdb_cafile: "{{ openstack_cacert }}"
-
-# Set to true to authorize insecure HTTPS connections to InfluxDB.
-# This means, HTTPS connections without validating the certificate used by InfluxDB
-# cloudkitty_influxdb_insecure_connections: false
-
-cloudkitty_influxdb_name: "cloudkitty"
-
-# Set the elasticsearch index name.
+# Set the elasticsearch/opensearch index name.
 cloudkitty_elasticsearch_index_name: "cloudkitty"
+cloudkitty_opensearch_index_name: "{{ cloudkitty_elasticsearch_index_name }}"
 
-# Set the elasticsearch host URL.
+# Set the elasticsearch/opensearch host URL.
 cloudkitty_elasticsearch_url: "{{ internal_protocol }}://{{ opensearch_address }}:{{ opensearch_port }}"
+cloudkitty_opensearch_url: "{{ cloudkitty_elasticsearch_url }}"
 
 # Path of the CA certificate to trust for HTTPS connections.
-# cloudkitty_elasticsearch_cafile: "{{ openstack_cacert }}"
+cloudkitty_elasticsearch_cafile: "{{ openstack_cacert }}"
 
 # Set to true to authorize insecure HTTPS connections to Elasticsearch.
 # This means, HTTPS connections without validating the certificate used by elasticsearch
 cloudkitty_elasticsearch_insecure_connections: false
+
+# Path of the CA certificate to trust for HTTPS connections.
+cloudkitty_opensearch_cafile: "{{ openstack_cacert }}"
+
+# Set to true to authorize insecure HTTPS connections to OpenSearch.
+# This means, HTTPS connections without validating the certificate used by
+# OpenSearch.
+cloudkitty_opensearch_insecure_connections: false
 
 ####################
 # Collector
@@ -189,7 +193,7 @@ cloudkitty_collector_backend: "gnocchi"
 cloudkitty_prometheus_url: "{{ internal_protocol }}://{{ kolla_internal_fqdn | put_address_in_context('url') }}:{{ prometheus_port }}/api/v1"
 
 # Path of the CA certificate to trust for HTTPS connections.
-# cloudkitty_prometheus_cafile: "{{ openstack_cacert }}"
+cloudkitty_prometheus_cafile: "{{ openstack_cacert }}"
 
 # Set to true to authorize insecure HTTPS connections to Prometheus.
 # This means, HTTPS connections without validating the certificate used by prometheus.
@@ -221,3 +225,11 @@ cloudkitty_ks_users:
 
 cloudkitty_ks_roles:
   - "{{ cloudkitty_openstack_keystone_default_role }}"
+
+# Database
+cloudkitty_database_enable_tls_internal: "{{ database_enable_tls_internal | bool }}"
+
+###################
+# Copy certificates
+###################
+cloudkitty_copy_certs: "{{ kolla_copy_ca_into_containers | bool or cloudkitty_database_enable_tls_internal | bool }}"

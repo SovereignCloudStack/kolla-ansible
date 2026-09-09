@@ -1,9 +1,13 @@
 ---
-- import_tasks: config.yml
+- name: Configure prometheus
+  ansible.builtin.import_tasks: config.yml
 
-- import_tasks: check-containers.yml
+- name: Check prometheus containers
+  ansible.builtin.import_tasks: check-containers.yml
 
-- import_tasks: bootstrap.yml
+- name: Bootstrap prometheus service
+  ansible.builtin.include_tasks: bootstrap.yml
+  when: inventory_hostname in groups['prometheus-mysqld-exporter']
 
 - name: Flush handlers
-  meta: flush_handlers
+  ansible.builtin.meta: flush_handlers

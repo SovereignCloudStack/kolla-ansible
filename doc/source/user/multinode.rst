@@ -60,7 +60,7 @@ controls how ansible interacts with remote hosts.
 
    Ansible uses SSH to connect the deployment host and target hosts. For more
    information about SSH authentication please reference
-   `Ansible documentation <http://docs.ansible.com/ansible/intro_inventory.html>`__.
+   `Ansible documentation <http://docs.ansible.com/ansible/latest/intro_inventory.html>`__.
 
 .. code-block:: ini
 
@@ -75,7 +75,7 @@ controls how ansible interacts with remote hosts.
 
    Additional inventory parameters might be required according to your
    environment setup. Reference `Ansible Documentation
-   <http://docs.ansible.com/ansible/intro_inventory.html>`__ for more
+   <http://docs.ansible.com/ansible/latest/intro_inventory.html>`__ for more
    information.
 
 
@@ -136,7 +136,7 @@ host or group variables:
 <https://docs.ansible.com/ansible/latest/user_guide/playbooks_variables.html#ansible-variable-precedence>`__
 are quite complex, but it is worth becoming familiar with them if using host
 and group variables. The playbook group variables in
-``ansible/group_vars/all.yml`` define global defaults, and these take
+``ansible/group_vars/all/`` define global defaults, and these take
 precedence over variables defined in an inventory file and inventory
 ``group_vars/all``, but not over inventory ``group_vars/*``. Variables in
 'extra' files (``globals.yml``) have the highest precedence, so any variables
@@ -176,4 +176,20 @@ Run the deployment:
 .. code-block:: console
 
    kolla-ansible deploy -i <path/to/multinode/inventory/file>
+
+Validate generated configuration files of enabled services:
+
+.. code-block:: console
+
+   kolla-ansible validate-config -i <path/to/multinode/inventory/file>
+
+.. note::
+
+   Due to the nature of the configuration generation the validation can
+   currently only be done after the first deployment. For some validations
+   it is necessary to access the running containers.
+   The validation tasks can be found - and altered - in each ansible role under
+   ``kolla-ansible/ansible/roles/$role/tasks/config_validate.yml``.
+   The validation for most openstack services is done by the special role:
+   ``service-config-validate``.
 

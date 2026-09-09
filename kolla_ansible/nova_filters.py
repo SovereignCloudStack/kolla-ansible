@@ -15,6 +15,8 @@
 import jinja2
 import re
 
+from kolla_ansible import exception
+
 
 def extract_cell(list_cells_cli_output, cell_name):
     """Extract cell settings from nova_manage CLI
@@ -36,8 +38,7 @@ def extract_cell(list_cells_cli_output, cell_name):
     # NOTE(priteau): regexp doesn't support passwords containing spaces
     p = re.compile(
         r'\| +(?P<cell_name>[^ ]+)? +'
-        r'\| +(?!00000000-0000-0000-0000-000000000000)'
-        r'(?P<cell_uuid>[0-9a-f\-]+) +'
+        r'\| +(?P<cell_uuid>[0-9a-f\-]+) +'
         r'\| +(?P<cell_message_queue>[^ ]+) +'
         r'\| +(?P<cell_database>[^ ]+) +'
         r'\| +(?P<cell_disabled>[^ ]+) +'
@@ -86,8 +87,92 @@ def namespace_haproxy_for_cell(services, cell_name):
     return services
 
 
+def get_expected_ironic_compute_services(ironic_compute_batch_info,
+                                         multi_compute_conf,
+                                         nova_cell_compute_ironic_group):
+    """Return a List of expected Ironic compute services
+
+      :param ironic_compute_batch_info: A dict containing configuration
+             information about Ironic Compute hosts.
+      :param multi_compute_conf: Ironic multi-compute config
+      :param nova_cell_compute_ironic_group: Ansible group name for
+             nova-compute-ironic. Eg. 'nova-compute-ironic'.
+      :returns: A list of Nova Compute Ironic service hostnames.
+    """
+    classic_info = ironic_compute_batch_info['classic']
+    multi_compute_info = ironic_compute_batch_info['multi']
+    if len(multi_compute_conf) == 0:
+        return [f'{host}-ironic' for host in classic_info]
+
+    expected_services = []
+    group_prefix = nova_cell_compute_ironic_group + '-'
+    for host in multi_compute_info:
+        iterate_vars = [
+            int(group.split(group_prefix)[1])
+            for group in host if group_prefix in group]
+        for i in iterate_vars:
+            try:
+                service_conf = multi_compute_conf[i - 1]
+            except IndexError:
+                raise exception.FilterError(
+                    "Unable to look up multi-compute Ironic config for "
+                    "{g}-{i} inventory group. Check that "
+                    "nova_multi_compute_ironic_config has an entry for "
+                    "each defined group.".format(
+                        g=nova_cell_compute_ironic_group,
+                        i=i))
+            expected_services.append(
+                _get_expected_compute_service_name(service_conf))
+    return expected_services
+
+
+def _get_expected_compute_service_name(service_conf):
+    custom_host = service_conf.get('custom_host')
+    if custom_host:
+        return f"{custom_host}-ironic"
+    cg = service_conf.get('conductor_group', 'default')
+    sk = service_conf.get('shard_key', 'default')
+    return f"{cg}-{sk}-ironic"
+
+
+def nova_az_host_map(hostvars, compute_hosts):
+    """Build an AZ-name to nodename list mapping from compute host hostvars.
+
+    :param hostvars: Ansible hostvars dict.
+    :param compute_hosts: list of compute host names in the cell.
+    :returns: dict mapping AZ name to list of nodenames assigned to that AZ.
+    """
+    result = {}
+    for host in compute_hosts:
+        az = hostvars[host].get('nova_compute_availability_zone') or ''
+        if not az:
+            continue
+        nodename = hostvars[host]['ansible_facts']['nodename']
+        result.setdefault(az, []).append(nodename)
+    return result
+
+
+def nova_aggregate_host_map(hostvars, compute_hosts):
+    """Build an aggregate-name to nodename list mapping from compute hostvars.
+
+    :param hostvars: Ansible hostvars dict.
+    :param compute_hosts: list of compute host names in the cell.
+    :returns: dict mapping aggregate name to list of nodenames assigned to it.
+    """
+    result = {}
+    for host in compute_hosts:
+        aggregates = hostvars[host].get('nova_compute_aggregates') or []
+        nodename = hostvars[host]['ansible_facts']['nodename']
+        for agg in aggregates:
+            result.setdefault(agg, []).append(nodename)
+    return result
+
+
 def get_filters():
     return {
         "extract_cell": extract_cell,
         "namespace_haproxy_for_cell": namespace_haproxy_for_cell,
+        "get_expected_ironic_compute_services": get_expected_ironic_compute_services,  # noqa
+        "nova_az_host_map": nova_az_host_map,
+        "nova_aggregate_host_map": nova_aggregate_host_map,
     }

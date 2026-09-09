@@ -8,6 +8,27 @@ cyborg_services:
     volumes: "{{ cyborg_api_default_volumes + cyborg_api_extra_volumes }}"
     dimensions: "{{ cyborg_api_dimensions }}"
     healthcheck: "{{ cyborg_api_healthcheck }}"
+    wsgi: "cyborg.wsgi.api:application"
+    haproxy:
+      cyborg_api:
+        enabled: "{{ enable_cyborg }}"
+        mode: "http"
+        external: false
+        port: "{{ cyborg_api_port }}"
+        listen_port: "{{ cyborg_api_listen_port }}"
+        backend_http_extra:
+          - "option httpchk GET /"
+          - "http-check expect status 200"
+      cyborg_api_external:
+        enabled: "{{ enable_cyborg }}"
+        mode: "http"
+        external: true
+        external_fqdn: "{{ cyborg_external_fqdn }}"
+        port: "{{ cyborg_api_public_port }}"
+        listen_port: "{{ cyborg_api_listen_port }}"
+        backend_http_extra:
+          - "option httpchk GET /"
+          - "http-check expect status 200"
   cyborg-agent:
     container_name: cyborg_agent
     group: cyborg-agent
@@ -49,8 +70,11 @@ cyborg_database_shard:
   users:
     - user: "{{ cyborg_database_user }}"
       password: "{{ cyborg_database_password }}"
+      shard_id: "{{ cyborg_database_shard_id }}"
   rules:
     - schema: "{{ cyborg_database_name }}"
+      shard_id: "{{ cyborg_database_shard_id }}"
+    - user: "{{ cyborg_database_user }}"
       shard_id: "{{ cyborg_database_shard_id }}"
 
 
@@ -59,15 +83,15 @@ cyborg_database_shard:
 ####################
 cyborg_tag: "{{ openstack_tag }}"
 
-cyborg_api_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/cyborg-api"
+cyborg_api_image: "{{ docker_image_url }}cyborg-api"
 cyborg_api_tag: "{{ cyborg_tag }}"
 cyborg_api_image_full: "{{ cyborg_api_image }}:{{ cyborg_api_tag }}"
 
-cyborg_agent_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/cyborg-agent"
+cyborg_agent_image: "{{ docker_image_url }}cyborg-agent"
 cyborg_agent_tag: "{{ cyborg_tag }}"
 cyborg_agent_image_full: "{{ cyborg_agent_image }}:{{ cyborg_agent_tag }}"
 
-cyborg_conductor_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/cyborg-conductor"
+cyborg_conductor_image: "{{ docker_image_url }}cyborg-conductor"
 cyborg_conductor_tag: "{{ cyborg_tag }}"
 cyborg_conductor_image_full: "{{ cyborg_conductor_image }}:{{ cyborg_conductor_tag }}"
 
@@ -116,22 +140,22 @@ cyborg_conductor_healthcheck:
 
 cyborg_api_default_volumes:
   - "{{ node_config_directory }}/cyborg-api/:{{ container_config_directory }}/:ro"
-  - "/etc/localtime:/etc/localtime:ro"
-  - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "cyborg:/var/lib/cyborg/"
   - "kolla_logs:/var/log/kolla/"
+  - "{{ '/dev/shm:/dev/shm' }}"
+  - "{{ kolla_dev_repos_directory ~ '/cyborg:/dev-mode/cyborg' if cyborg_dev_mode | bool else '' }}"
 
 cyborg_agent_default_volumes:
   - "{{ node_config_directory }}/cyborg-agent/:{{ container_config_directory }}/:ro"
-  - "/etc/localtime:/etc/localtime:ro"
-  - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "kolla_logs:/var/log/kolla/"
+  - "{{ '/dev/shm:/dev/shm' }}"
+  - "{{ kolla_dev_repos_directory ~ '/cyborg:/dev-mode/cyborg' if cyborg_dev_mode | bool else '' }}"
 
 cyborg_conductor_default_volumes:
   - "{{ node_config_directory }}/cyborg-conductor/:{{ container_config_directory }}/:ro"
-  - "/etc/localtime:/etc/localtime:ro"
-  - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "kolla_logs:/var/log/kolla/"
+  - "{{ '/dev/shm:/dev/shm' }}"
+  - "{{ kolla_dev_repos_directory ~ '/cyborg:/dev-mode/cyborg' if cyborg_dev_mode | bool else '' }}"
 
 cyborg_extra_volumes: "{{ default_extra_volumes }}"
 cyborg_api_extra_volumes: "{{ cyborg_extra_volumes }}"
@@ -150,6 +174,15 @@ cyborg_keystone_user: "cyborg"
 
 openstack_cyborg_auth: "{{ openstack_auth }}"
 
+cyborg_api_workers: "{{ openstack_service_workers }}"
+
+####################
+# Kolla
+####################
+cyborg_git_repository: "{{ kolla_dev_repos_git }}/{{ project_name }}"
+cyborg_dev_repos_pull: "{{ kolla_dev_repos_pull }}"
+cyborg_dev_mode: "{{ kolla_dev_mode }}"
+cyborg_source_version: "{{ kolla_source_version }}"
 
 ####################
 # Notifications
@@ -176,3 +209,11 @@ cyborg_ks_users:
     user: "{{ cyborg_keystone_user }}"
     password: "{{ cyborg_keystone_password }}"
     role: "admin"
+
+# Database
+cyborg_database_enable_tls_internal: "{{ database_enable_tls_internal | bool }}"
+
+###################
+# Copy certificates
+###################
+cyborg_copy_certs: "{{ kolla_copy_ca_into_containers | bool or cyborg_database_enable_tls_internal | bool }}"

@@ -1,7 +1,5 @@
-{% set apache_binary = 'apache2' if kolla_base_distro in ['ubuntu', 'debian'] else 'httpd' %}
-{% set apache_conf_dir = 'apache2/conf-enabled' if kolla_base_distro in ['ubuntu', 'debian'] else 'httpd/conf.d' %}
 {
-    "command": "/usr/sbin/{{ apache_binary }} -DFOREGROUND",
+    "command": "uwsgi /etc/ironic/ironic-api-uwsgi.ini",
     "config_files": [
         {
             "source": "{{ container_config_directory }}/ironic.conf",
@@ -10,8 +8,8 @@
             "perm": "0600"
         },
         {
-            "source": "{{ container_config_directory }}/ironic-api-wsgi.conf",
-            "dest": "/etc/{{ apache_conf_dir }}/ironic-api-wsgi.conf",
+            "source": "{{ container_config_directory }}/ironic-api-uwsgi.ini",
+            "dest": "/etc/ironic/ironic-api-uwsgi.ini",
             "owner": "ironic",
             "perm": "0600"
         }{% if ironic_policy_file is defined %},
@@ -32,13 +30,31 @@
             "dest": "/etc/ironic/certs/ironic-key.pem",
             "owner": "ironic",
             "perm": "0600"
+        }{% endif %}{% if kolla_copy_ca_into_containers | bool %},
+        {
+            "source": "{{ container_config_directory }}/ca-certificates",
+            "dest": "/var/lib/kolla/share/ca-certificates",
+            "owner": "root",
+            "perm": "0644"
         }{% endif %}
+    ],
+    "directories": [
+        {
+            "path": "/var/log/kolla",
+            "owner": "fluentd:kolla",
+            "perm": "2775"
+        },
+        {
+            "path": "/var/log/kolla/ironic",
+            "owner": "ironic:kolla",
+            "perm": "2775"
+        }
     ],
     "permissions": [
         {
-            "path": "/var/log/kolla/ironic",
-            "owner": "ironic:ironic",
-            "recurse": true
+            "path": "/var/log/kolla/ironic/*.log",
+            "owner": "ironic:kolla",
+            "perm": "0664"
         }
     ]
 }

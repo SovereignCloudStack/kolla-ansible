@@ -4,10 +4,11 @@ placement_services:
     container_name: "placement_api"
     group: "placement-api"
     image: "{{ placement_api_image_full }}"
-    enabled: True
+    enabled: true
     volumes: "{{ placement_api_default_volumes + placement_api_extra_volumes }}"
     dimensions: "{{ placement_api_dimensions }}"
     healthcheck: "{{ placement_api_healthcheck }}"
+    wsgi: "placement.wsgi.api:application"
     haproxy:
       placement_api:
         enabled: "{{ enable_placement }}"
@@ -16,6 +17,9 @@ placement_services:
         port: "{{ placement_api_port }}"
         listen_port: "{{ placement_api_listen_port }}"
         tls_backend: "{{ placement_enable_tls_backend }}"
+        backend_http_extra:
+          - "option httpchk GET /"
+          - "http-check expect status 200"
       placement_api_external:
         enabled: "{{ enable_placement }}"
         mode: "http"
@@ -24,6 +28,9 @@ placement_services:
         port: "{{ placement_api_public_port }}"
         listen_port: "{{ placement_api_listen_port }}"
         tls_backend: "{{ placement_enable_tls_backend }}"
+        backend_http_extra:
+          - "option httpchk GET /"
+          - "http-check expect status 200"
 
 ####################
 # Config Validate
@@ -48,8 +55,11 @@ placement_database_shard:
   users:
     - user: "{{ placement_database_user }}"
       password: "{{ placement_database_password }}"
+      shard_id: "{{ placement_database_shard_id }}"
   rules:
     - schema: "{{ placement_database_name }}"
+      shard_id: "{{ placement_database_shard_id }}"
+    - user: "{{ placement_database_user }}"
       shard_id: "{{ placement_database_shard_id }}"
 
 
@@ -58,7 +68,7 @@ placement_database_shard:
 ####################
 placement_tag: "{{ openstack_tag }}"
 
-placement_api_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/placement-api"
+placement_api_image: "{{ docker_image_url }}placement-api"
 placement_api_tag: "{{ placement_tag }}"
 placement_api_image_full: "{{ placement_api_image }}:{{ placement_api_tag }}"
 
@@ -68,7 +78,10 @@ placement_api_enable_healthchecks: "{{ enable_container_healthchecks }}"
 placement_api_healthcheck_interval: "{{ default_container_healthcheck_interval }}"
 placement_api_healthcheck_retries: "{{ default_container_healthcheck_retries }}"
 placement_api_healthcheck_start_period: "{{ default_container_healthcheck_start_period }}"
-placement_api_healthcheck_test: ["CMD-SHELL", "healthcheck_curl {{ 'https' if placement_enable_tls_backend | bool else 'http' }}://{{ api_interface_address | put_address_in_context('url') }}:{{ placement_api_listen_port }}"]
+placement_api_healthcheck_test:
+  - "CMD-SHELL"
+  - healthcheck_curl {{ 'https' if placement_enable_tls_backend | bool else 'http' }}://{{
+    api_interface_address | put_address_in_context('url') }}:{{ placement_api_listen_port }}
 placement_api_healthcheck_timeout: "{{ default_container_healthcheck_timeout }}"
 placement_api_healthcheck:
   interval: "{{ placement_api_healthcheck_interval }}"
@@ -79,19 +92,14 @@ placement_api_healthcheck:
 
 placement_api_default_volumes:
   - "{{ node_config_directory }}/placement-api/:{{ container_config_directory }}/:ro"
-  - "/etc/localtime:/etc/localtime:ro"
-  - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "kolla_logs:/var/log/kolla/"
-  - "{{ kolla_dev_repos_directory ~ '/placement/placement:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/placement' if placement_dev_mode | bool else '' }}"
+  - "{{ kolla_dev_repos_directory ~ '/placement:/dev-mode/placement' if placement_dev_mode | bool else '' }}"
 
 placement_api_extra_volumes: "{{ default_extra_volumes }}"
 
 ####################
 # OpenStack
 ####################
-placement_internal_endpoint: "{{ placement_internal_fqdn | kolla_url(internal_protocol, placement_api_port) }}"
-placement_public_endpoint: "{{ placement_external_fqdn | kolla_url(public_protocol, placement_api_public_port) }}"
-
 placement_logging_debug: "{{ openstack_logging_debug }}"
 
 openstack_placement_auth: "{{ openstack_auth }}"
@@ -103,7 +111,7 @@ placement_api_workers: "{{ openstack_service_workers }}"
 ####################
 placement_notification_topics:
   - name: notifications
-    enabled: "{{ enable_ceilometer | bool or enable_neutron_infoblox_ipam_agent | bool }}"
+    enabled: "{{ enable_ceilometer | bool }}"
 
 placement_enabled_notification_topics: "{{ placement_notification_topics | selectattr('enabled', 'equalto', true) | list }}"
 
@@ -145,3 +153,11 @@ placement_ks_users:
 # TLS
 ####################
 placement_enable_tls_backend: "{{ kolla_enable_tls_backend }}"
+
+# Database
+placement_database_enable_tls_internal: "{{ database_enable_tls_internal | bool }}"
+
+###################
+# Copy certificates
+###################
+placement_copy_certs: "{{ kolla_copy_ca_into_containers | bool or placement_enable_tls_backend | bool or placement_database_enable_tls_internal | bool }}"

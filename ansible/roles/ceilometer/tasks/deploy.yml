@@ -1,14 +1,19 @@
 ---
-- import_tasks: register.yml
+- name: Register ceilometer in Keystone
+  ansible.builtin.import_tasks: register.yml
 
-- import_tasks: config.yml
+- name: Configure ceilometer
+  ansible.builtin.import_tasks: config.yml
 
-- import_tasks: check-containers.yml
+- name: Check ceilometer containers
+  ansible.builtin.import_tasks: check-containers.yml
 
-- include_tasks: clone.yml
+- name: Clone ceilometer repository
+  ansible.builtin.include_tasks: clone.yml
   when: ceilometer_dev_mode | bool
 
-- import_tasks: bootstrap.yml
+- name: Bootstrap ceilometer service
+  ansible.builtin.import_tasks: bootstrap.yml
 
 - name: Flush handlers
-  meta: flush_handlers
+  ansible.builtin.meta: flush_handlers

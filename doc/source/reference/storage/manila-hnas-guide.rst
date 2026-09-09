@@ -12,11 +12,11 @@ provides NFS Shared File Systems to OpenStack.
 
 Requirements
 ------------
-- Hitachi NAS Platform Models 3080, 3090, 4040, 4060, 4080, and 4100.
+* Hitachi NAS Platform Models 3080, 3090, 4040, 4060, 4080, and 4100.
 
-- HNAS/SMU software version is 12.2 or higher.
+* HNAS/SMU software version is 12.2 or higher.
 
-- HNAS configuration and management utilities to create a storage pool (span)
+* HNAS configuration and management utilities to create a storage pool (span)
   and an EVS.
 
   -  GUI (SMU).
@@ -30,27 +30,27 @@ The driver supports CIFS and NFS shares.
 
 The following operations are supported:
 
-- Create a share.
+* Create a share.
 
-- Delete a share.
+* Delete a share.
 
-- Allow share access.
+* Allow share access.
 
-- Deny share access.
+* Deny share access.
 
-- Create a snapshot.
+* Create a snapshot.
 
-- Delete a snapshot.
+* Delete a snapshot.
 
-- Create a share from a snapshot.
+* Create a share from a snapshot.
 
-- Extend a share.
+* Extend a share.
 
-- Shrink a share.
+* Shrink a share.
 
-- Manage a share.
+* Manage a share.
 
-- Unmanage a share.
+* Unmanage a share.
 
 
 Preparation and Deployment
@@ -77,8 +77,8 @@ Enable Shared File Systems service and HNAS driver in
 
 .. code-block:: yaml
 
-   enable_manila: "yes"
-   enable_manila_backend_hnas: "yes"
+   enable_manila: true
+   enable_manila_backend_hnas: true
 
 Configure the OpenStack networking so it can reach HNAS Management
 interface and HNAS EVS Data interface.

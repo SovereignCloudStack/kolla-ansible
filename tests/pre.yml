@@ -26,6 +26,18 @@
       vars:
         bridge_name: "{{ neutron_external_bridge_name }}"
         bridge_member_name: "{{ neutron_external_vxlan_interface_name }}"
+    - role: multi-node-vxlan-overlay
+      vars:
+        vxlan_interface_name: "{{ external_api_interface_name }}"
+        vxlan_vni: 10002
+      when: external_api_interface_name is defined
+    - role: multi-node-managed-addressing
+      vars:
+        managed_interface_name: "{{ external_api_interface_name }}"
+        managed_network_prefix: "{{ external_api_network_prefix }}"
+        managed_network_prefix_length: "{{ external_api_network_prefix_length }}"
+        managed_network_address_family: "{{ address_family }}"
+      when: external_api_interface_name is defined
     # TODO(mnasiadka): Update ipv6 jobs to test ipv6 in Neutron
     - role: multi-node-managed-addressing
       vars:
@@ -40,6 +52,19 @@
           - "veth-{{ neutron_external_bridge_name }}-ext"
         bridge_name: "{{ neutron_external_bridge_name }}"
   tasks:
+    - name: Set Rockylinux mirror to download.rockylinux.org
+      become: true
+      ansible.builtin.shell:
+        cmd: sed -i 's/mirrorlist/#mirrorlist/g; s/#baseurl/baseurl/g' /etc/yum.repos.d/rocky.repo
+      when: ansible_facts.distribution == "Rocky"
+
+    - name: Install kernel-modules-extra for running kernel
+      become: true
+      ansible.builtin.dnf:
+        name: "kernel-modules-extra-{{ ansible_facts.kernel }}"
+        state: present
+      when: ansible_facts.distribution == "Rocky"
+
     # NOTE(yoctozepto): we use gawk to add time to each logged line
     # outside of Ansible (e.g. for init-runonce)
     - name: Install gawk and required Python modules
@@ -49,12 +74,19 @@
           - gawk
           - python3-pip
           - python3-setuptools
+          - python3-requests
+
+    - name: Install stestr
+      become: true
+      pip:
+        break_system_packages: true
+        name: stestr
 
     - name: Install lvm on storage scenarios
       become: true
       package:
         name: lvm2
-      when: scenario in ['cephadm', 'zun', 'swift']
+      when: scenario in ['cephadm']
 
     - name: Ensure /tmp/logs/ dir
       file:
@@ -93,7 +125,7 @@
         - "ansible"
 
     # NOTE(yoctozepto): let's observe forwarding behavior
-    - name: iptables - LOG FORWARD
+    - name: Iptables - LOG FORWARD
       become: true
       iptables:
         state: present
@@ -102,39 +134,11 @@
         jump: LOG
         log_prefix: 'iptables FORWARD: '
 
-    - name: set new hostname based on ansible inventory file
+    - name: Set new hostname based on ansible inventory file
       hostname:
         name: "{{ inventory_hostname }}"
         use: systemd
       become: true
-
-    # NOTE(wxy): There are some issues on openEuler, fix them by hand.
-    # 1. iptables-legacy is used by default.
-    # 2. NTP sync doesn't work by default.
-    - block:
-        # The Ubuntu 22.04 in container uses iptables-nft while the host
-        # openEuler 22.03 uses iptables-legacy by default. We should update
-        # openEuler to keep iptables the same.
-        - name: Set iptables from legacy to nft for container
-          shell:
-            cmd: |
-              dnf install -y iptables-nft
-              iptables-save  > iptables.txt
-              iptables-nft-restore < iptables.txt
-              update-alternatives --set iptables /usr/sbin/iptables-nft
-          become: true
-
-        # The command `timedatectl status` always times out if the command
-        # `timedatectl show-timesync` is not run first.
-        - name: Install systemd-timesyncd
-          package:
-            name: systemd-timesyncd
-            state: present
-          become: True
-        - name: Let ntp service work
-          shell: timedatectl show-timesync
-          become: true
-      when: ansible_facts.distribution == 'openEuler'
 
     - name: Wait for ntp time sync
       command: timedatectl status

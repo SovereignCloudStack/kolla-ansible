@@ -32,8 +32,8 @@ a buffer key - three in total. If the rotation interval is set lower than the
 sum of the token expiry and token allow expired window, more active keys will
 be configured in Keystone as necessary.
 
-Further infomation on Fernet tokens is available in the :keystone-doc:`Keystone
-documentation <admin/fernet-token-faq.html>`.
+Further information on Fernet tokens is available in the
+:keystone-doc:`Keystone documentation <admin/fernet-token-faq.html>`.
 
 Federated identity
 ------------------
@@ -87,6 +87,7 @@ below:
     keystone_identity_mappings:
       - name: "mappingId1"
         file: "/full/qualified/path/to/mapping/json/file/to/mappingId1"
+        schema_version: "2.0"
 
 In some cases it's necessary to add JWKS (JSON Web Key Set) uri.
 It is required for auth-openidc endpoint - which is
@@ -96,13 +97,27 @@ used by OpenStack command line client. Example config shown below:
 
     keystone_federation_oidc_jwks_uri: "https://<AUTH PROVIDER>/<ID>/discovery/v2.0/keys"
 
-Some identity providers need additional mod_auth_openidc config.
-Example for Keycloak shown below:
+Some identity providers need additional ``mod_auth_openidc`` config, which can
+be passed with the ``keystone_federation_oidc_additional_options`` variable:
 
 .. code-block:: yaml
 
     keystone_federation_oidc_additional_options:
-      OIDCTokenBindingPolicy: disabled
+      OIDCOutgoingProxy: "http://proxy.example.com"
+
+When using OIDC, operators can also use the following variable
+to customize the delay to retry authenticating in the IdP if the
+authentication has timeout:
+
+``keystone_federation_oidc_error_page_retry_login_delay_milliseconds``
+    Default is 5000 milliseconds (5 seconds).
+
+It is also possible to override the ``OIDCHTMLErrorTemplate``,
+the custom error template page via:
+
+.. code-block:: yaml
+
+  {{ node_custom_config }}/keystone/federation/modoidc-error-page.html
 
 Identity providers configurations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -116,6 +131,11 @@ openstack_domain
 ****************
 
 The OpenStack domain that the Identity Provider belongs.
+
+.. note::
+   Kolla-Ansible does not support duplicate openstack_domain names,
+   where the ID of the domain is different, but the name is the same.
+   This is an edge case that is hard to take into account.
 
 protocol
 ********

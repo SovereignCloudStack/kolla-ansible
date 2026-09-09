@@ -1,6 +1,6 @@
 ---
 - name: Warn about Train upgrade
-  debug:
+  ansible.builtin.debug:
     msg: >-
       In Train, Tacker started using local filesystem to store VNF
       packages and CSAR files.
@@ -13,7 +13,7 @@
     service_name: "tacker-conductor"
     service: "{{ tacker_services[service_name] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     common_options: "{{ docker_common_options }}"
     action: "stop_and_remove_container"
     name: "{{ service.container_name }}"
@@ -25,18 +25,21 @@
     service_name: "tacker-server"
     service: "{{ tacker_services[service_name] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     common_options: "{{ docker_common_options }}"
     action: "stop_and_remove_container"
     name: "{{ service.container_name }}"
   when:
     - inventory_hostname not in tacker_hosts
 
-- import_tasks: config.yml
+- name: Configure tacker
+  ansible.builtin.import_tasks: config.yml
 
-- import_tasks: check-containers.yml
+- name: Check tacker containers
+  ansible.builtin.import_tasks: check-containers.yml
 
-- import_tasks: bootstrap_service.yml
+- name: Run tacker bootstrap container
+  ansible.builtin.import_tasks: bootstrap_service.yml
 
 - name: Flush handlers
-  meta: flush_handlers
+  ansible.builtin.meta: flush_handlers

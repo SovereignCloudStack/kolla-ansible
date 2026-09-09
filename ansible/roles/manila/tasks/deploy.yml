@@ -1,14 +1,19 @@
 ---
-- include_tasks: clone.yml
+- name: Clone manila repository
+  ansible.builtin.include_tasks: clone.yml
   when: manila_dev_mode | bool
 
-- import_tasks: register.yml
+- name: Register manila in Keystone
+  ansible.builtin.import_tasks: register.yml
 
-- import_tasks: config.yml
+- name: Configure manila
+  ansible.builtin.import_tasks: config.yml
 
-- import_tasks: check-containers.yml
+- name: Check manila containers
+  ansible.builtin.import_tasks: check-containers.yml
 
-- import_tasks: bootstrap.yml
+- name: Bootstrap manila service
+  ansible.builtin.import_tasks: bootstrap.yml
 
 - name: Flush handlers
-  meta: flush_handlers
+  ansible.builtin.meta: flush_handlers

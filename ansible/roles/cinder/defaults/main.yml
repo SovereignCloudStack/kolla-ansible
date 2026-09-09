@@ -8,6 +8,7 @@ cinder_services:
     volumes: "{{ cinder_api_default_volumes + cinder_api_extra_volumes }}"
     dimensions: "{{ cinder_api_dimensions }}"
     healthcheck: "{{ cinder_api_healthcheck }}"
+    wsgi: "cinder.wsgi.api:application"
     haproxy:
       cinder_api:
         enabled: "{{ enable_cinder }}"
@@ -16,6 +17,9 @@ cinder_services:
         port: "{{ cinder_api_port }}"
         listen_port: "{{ cinder_api_listen_port }}"
         tls_backend: "{{ cinder_enable_tls_backend }}"
+        backend_http_extra:
+          - "option httpchk GET /healthcheck"
+          - "http-check expect status 200"
       cinder_api_external:
         enabled: "{{ enable_cinder }}"
         mode: "http"
@@ -24,6 +28,9 @@ cinder_services:
         port: "{{ cinder_api_public_port }}"
         listen_port: "{{ cinder_api_listen_port }}"
         tls_backend: "{{ cinder_enable_tls_backend }}"
+        backend_http_extra:
+          - "option httpchk GET /healthcheck"
+          - "http-check expect status 200"
   cinder-scheduler:
     container_name: cinder_scheduler
     group: cinder-scheduler
@@ -34,10 +41,13 @@ cinder_services:
     healthcheck: "{{ cinder_scheduler_healthcheck }}"
   cinder-volume:
     container_name: cinder_volume
-    group: cinder-volume
+    group: >-
+      {{ 'cinder-volume-multiple' if (cinder_enabled_backends | length > 1 and enable_cinder_backend_lvm | bool) else
+         'cinder-volume-lvm' if enable_cinder_backend_lvm | bool else
+         'cinder-volume' }}
     enabled: true
     image: "{{ cinder_volume_image_full }}"
-    privileged: True
+    privileged: true
     ipc_mode: "host"
     tmpfs: "{{ cinder_volume_tmpfs }}"
     volumes: "{{ cinder_volume_default_volumes + cinder_volume_extra_volumes + lookup('vars', 'run_default_volumes_' + kolla_container_engine) }}"
@@ -45,10 +55,14 @@ cinder_services:
     healthcheck: "{{ cinder_volume_healthcheck }}"
   cinder-backup:
     container_name: cinder_backup
-    group: cinder-backup
+    group: >-
+      {{ 'cinder-backup-multiple' if (cinder_enabled_backends | length > 1 and enable_cinder_backend_lvm | bool) else
+         'cinder-backup-lvm' if enable_cinder_backend_lvm | bool else
+         'cinder-backup' }}
     enabled: "{{ enable_cinder_backup | bool }}"
     image: "{{ cinder_backup_image_full }}"
-    privileged: True
+    privileged: true
+    ipc_mode: "host"
     volumes: "{{ cinder_backup_default_volumes + cinder_backup_extra_volumes + lookup('vars', 'run_default_volumes_' + kolla_container_engine) }}"
     dimensions: "{{ cinder_backup_dimensions }}"
     healthcheck: "{{ cinder_backup_healthcheck }}"
@@ -76,8 +90,11 @@ cinder_database_shard:
   users:
     - user: "{{ cinder_database_user }}"
       password: "{{ cinder_database_password }}"
+      shard_id: "{{ cinder_database_shard_id }}"
   rules:
     - schema: "{{ cinder_database_name }}"
+      shard_id: "{{ cinder_database_shard_id }}"
+    - user: "{{ cinder_database_user }}"
       shard_id: "{{ cinder_database_shard_id }}"
 
 
@@ -86,19 +103,19 @@ cinder_database_shard:
 ####################
 cinder_tag: "{{ openstack_tag }}"
 
-cinder_volume_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/cinder-volume"
+cinder_volume_image: "{{ docker_image_url }}cinder-volume"
 cinder_volume_tag: "{{ cinder_tag }}"
 cinder_volume_image_full: "{{ cinder_volume_image }}:{{ cinder_volume_tag }}"
 
-cinder_scheduler_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/cinder-scheduler"
+cinder_scheduler_image: "{{ docker_image_url }}cinder-scheduler"
 cinder_scheduler_tag: "{{ cinder_tag }}"
 cinder_scheduler_image_full: "{{ cinder_scheduler_image }}:{{ cinder_scheduler_tag }}"
 
-cinder_backup_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/cinder-backup"
+cinder_backup_image: "{{ docker_image_url }}cinder-backup"
 cinder_backup_tag: "{{ cinder_tag }}"
 cinder_backup_image_full: "{{ cinder_backup_image }}:{{ cinder_backup_tag }}"
 
-cinder_api_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/cinder-api"
+cinder_api_image: "{{ docker_image_url }}cinder-api"
 cinder_api_tag: "{{ cinder_tag }}"
 cinder_api_image_full: "{{ cinder_api_image }}:{{ cinder_api_tag }}"
 
@@ -111,7 +128,12 @@ cinder_api_enable_healthchecks: "{{ enable_container_healthchecks }}"
 cinder_api_healthcheck_interval: "{{ default_container_healthcheck_interval }}"
 cinder_api_healthcheck_retries: "{{ default_container_healthcheck_retries }}"
 cinder_api_healthcheck_start_period: "{{ default_container_healthcheck_start_period }}"
-cinder_api_healthcheck_test: ["CMD-SHELL", "healthcheck_curl {{ 'https' if cinder_enable_tls_backend | bool else 'http' }}://{{ api_interface_address | put_address_in_context('url') }}:{{ cinder_api_listen_port }}"]
+cinder_api_healthcheck_test:
+  - "CMD-SHELL"
+  - >-
+    healthcheck_curl {{
+    'https' if cinder_enable_tls_backend | bool else 'http' }}://{{
+    api_interface_address | put_address_in_context('url') }}:{{ cinder_api_listen_port }}/healthcheck
 cinder_api_healthcheck_timeout: "{{ default_container_healthcheck_timeout }}"
 cinder_api_healthcheck:
   interval: "{{ cinder_api_healthcheck_interval }}"
@@ -161,31 +183,25 @@ cinder_backup_healthcheck:
 
 cinder_api_default_volumes:
   - "{{ node_config_directory }}/cinder-api/:{{ container_config_directory }}/:ro"
-  - "/etc/localtime:/etc/localtime:ro"
-  - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "kolla_logs:/var/log/kolla/"
-  - "{{ kolla_dev_repos_directory ~ '/cinder/cinder:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/cinder' if cinder_dev_mode | bool else '' }}"
+  - "{{ '/dev/shm:/dev/shm' }}"
+  - "{{ kolla_dev_repos_directory ~ '/cinder:/dev-mode/cinder' if cinder_dev_mode | bool else '' }}"
 cinder_backup_default_volumes:
   - "{{ node_config_directory }}/cinder-backup/:{{ container_config_directory }}/:ro"
-  - "/etc/localtime:/etc/localtime:ro"
-  - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "/dev/:/dev/"
   - "/lib/modules:/lib/modules:ro"
   - "/run:/run{{ ':shared' if kolla_container_engine == 'docker' else '' }}"
   - "cinder:/var/lib/cinder"
   - "{% if enable_iscsid | bool %}iscsi_info:/etc/iscsi{% endif %}"
   - "kolla_logs:/var/log/kolla/"
-  - "{{ kolla_dev_repos_directory ~ '/cinder/cinder:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/cinder' if cinder_dev_mode | bool else '' }}"
+  - "{{ kolla_dev_repos_directory ~ '/cinder:/dev-mode/cinder' if cinder_dev_mode | bool else '' }}"
 cinder_scheduler_default_volumes:
   - "{{ node_config_directory }}/cinder-scheduler/:{{ container_config_directory }}/:ro"
-  - "/etc/localtime:/etc/localtime:ro"
-  - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "kolla_logs:/var/log/kolla/"
-  - "{{ kolla_dev_repos_directory ~ '/cinder/cinder:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/cinder' if cinder_dev_mode | bool else '' }}"
+  - "{{ '/dev/shm:/dev/shm' }}"
+  - "{{ kolla_dev_repos_directory ~ '/cinder:/dev-mode/cinder' if cinder_dev_mode | bool else '' }}"
 cinder_volume_default_volumes:
   - "{{ node_config_directory }}/cinder-volume/:{{ container_config_directory }}/:ro"
-  - "/etc/localtime:/etc/localtime:ro"
-  - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "/dev/:/dev/"
   - "/lib/modules:/lib/modules:ro"
   - "/run:/run{{ ':shared' if kolla_container_engine == 'docker' else '' }}"
@@ -193,7 +209,7 @@ cinder_volume_default_volumes:
   - "{% if enable_iscsid | bool %}iscsi_info:/etc/iscsi{% endif %}"
   - "{% if enable_cinder_backend_lvm | bool and cinder_target_helper == 'lioadm' %}target_config:/etc/target{% endif %}"
   - "kolla_logs:/var/log/kolla/"
-  - "{{ kolla_dev_repos_directory ~ '/cinder/cinder:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/cinder' if cinder_dev_mode | bool else '' }}"
+  - "{{ kolla_dev_repos_directory ~ '/cinder:/dev-mode/cinder' if cinder_dev_mode | bool else '' }}"
 
 cinder_extra_volumes: "{{ default_extra_volumes }}"
 cinder_api_extra_volumes: "{{ cinder_extra_volumes }}"
@@ -210,9 +226,8 @@ cinder_enable_conversion_tmpfs: false
 ####################
 # OpenStack
 ####################
-cinder_internal_base_endpoint: "{{ cinder_internal_fqdn | kolla_url(internal_protocol, cinder_api_port) }}"
-cinder_public_base_endpoint: "{{ cinder_external_fqdn | kolla_url(public_protocol, cinder_api_public_port) }}"
-
+cinder_internal_endpoint: "{{ cinder_internal_base_endpoint }}/v3"
+cinder_public_endpoint: "{{ cinder_public_base_endpoint }}/v3"
 cinder_v3_internal_endpoint: "{{ cinder_internal_base_endpoint }}/v3/%(tenant_id)s"
 cinder_v3_public_endpoint: "{{ cinder_public_base_endpoint }}/v3/%(tenant_id)s"
 
@@ -234,48 +249,12 @@ cinder_api_workers: "{{ openstack_service_workers }}"
 ####################
 # Cinder
 ####################
-cinder_backends:
-  - name: "{{ cinder_backend_lvm_name }}"
-    enabled: "{{ enable_cinder_backend_lvm | bool }}"
-  - name: "{{ cinder_backend_nfs_name }}"
-    enabled: "{{ enable_cinder_backend_nfs | bool }}"
-  - name: "{{ cinder_backend_hnas_nfs_name }}"
-    enabled: "{{ enable_cinder_backend_hnas_nfs | bool }}"
-  - name: "{{ cinder_backend_vmwarevc_vmdk_name }}"
-    enabled: "{{ cinder_backend_vmwarevc_vmdk | bool }}"
-  - name: "{{ cinder_backend_vmware_vstorage_object_name }}"
-    enabled: "{{ cinder_backend_vmware_vstorage_object | bool }}"
-  - name: "{{ cinder_backend_quobyte_name }}"
-    enabled: "{{ enable_cinder_backend_quobyte | bool }}"
-  - name: "{{ cinder_backend_pure_iscsi_name }}"
-    enabled: "{{ enable_cinder_backend_pure_iscsi | bool }}"
-  - name: "{{ cinder_backend_pure_fc_name }}"
-    enabled: "{{ enable_cinder_backend_pure_fc | bool }}"
-  - name: "{{ cinder_backend_pure_roce_name }}"
-    enabled: "{{ enable_cinder_backend_pure_roce | bool }}"
-
-cinder_backend_ceph_name: "rbd-1"
-cinder_backend_lvm_name: "lvm-1"
-cinder_backend_nfs_name: "nfs-1"
-cinder_backend_hnas_nfs_name: "hnas-nfs"
-cinder_backend_vmwarevc_vmdk_name: "vmwarevc-vmdk"
-cinder_backend_vmware_vstorage_object_name: "vmware-vstorage-object"
-cinder_backend_quobyte_name: "QuobyteHD"
-cinder_backend_pure_iscsi_name: "Pure-FlashArray-iscsi"
-cinder_backend_pure_fc_name: "Pure-FlashArray-fc"
-cinder_backend_pure_roce_name: "Pure-FlashArray-roce"
-
-cinder_ceph_backends:
-  - name: "{{ cinder_backend_ceph_name }}"
-    cluster: "ceph"
-    enabled: "{{ cinder_backend_ceph | bool }}"
-
-cinder_backup_backend_ceph_name: "rbd-1"
-cinder_backup_ceph_backend: "{{ cinder_ceph_backends | selectattr('name', 'equalto', cinder_backup_backend_ceph_name) | list | first }}"
-
-skip_cinder_backend_check: False
-
-cinder_enabled_backends: "{{ cinder_backends | selectattr('enabled', 'equalto', true) | list + cinder_ceph_backends | selectattr('enabled', 'equalto', true) | list }}"
+# NOTE: the cinder backend definitions (cinder_backends, cinder_ceph_backends,
+# cinder_enabled_backends, cinder_backup_backend_ceph_name,
+# cinder_backup_ceph_backend and the cinder_backend_*_name variables) are
+# defined in group_vars/all/cinder.yml so that all cinder backend definitions
+# live in one place and are in scope for the iscsi role.
+skip_cinder_backend_check: false
 
 ####################
 # Notification
@@ -283,20 +262,8 @@ cinder_enabled_backends: "{{ cinder_backends | selectattr('enabled', 'equalto', 
 cinder_notification_topics:
   - name: notifications
     enabled: "{{ enable_ceilometer | bool }}"
-  - name: vitrage_notifications
-    enabled: "{{ enable_vitrage | bool }}"
 
 cinder_enabled_notification_topics: "{{ cinder_notification_topics | selectattr('enabled', 'equalto', true) | list }}"
-
-##################################
-# Hitachi NAS Platform NFS drivers
-##################################
-# nfs
-hnas_nfs_backend: "hnas_nfs_backend"
-hnas_nfs_username:
-hnas_nfs_mgmt_ip0:
-hnas_nfs_svc0_volume_type:
-hnas_nfs_svc0_hdp:
 
 #########################
 # Quobyte Storage Driver
@@ -305,13 +272,30 @@ quobyte_storage_host:
 quobyte_storage_volume:
 
 
-################################
-# Pure FlashArray Storage Driver
-################################
+####################################
+# Everpure FlashArray Storage Driver
+####################################
 pure_iscsi_backend: "pure_iscsi_backend"
 pure_fc_backend: "pure_fc_backend"
 pure_api_token:
 pure_san_ip:
+
+################################
+# Lightbits Storage Driver
+###############################
+lightbits_nvme_tcp_backend_name: "lightbits_nvme_backend"
+lightos_skip_ssl_verify: false
+lightos_api_port: 443
+lightos_default_num_replicas: 3
+lightos_api_address:
+lightos_jwt:
+
+################################
+# Cinder VAST Storage Driver
+################################
+cinder_vast_username: admin
+cinder_vast_ip: "{{ vast_host }}"
+cinder_vast_port: "{{ vast_port }}"
 
 ################################
 # Cinder Backup S3
@@ -333,12 +317,12 @@ cinder_source_version: "{{ kolla_source_version }}"
 # Keystone
 ####################
 cinder_ks_services:
-  - name: "cinderv3"
-    type: "volumev3"
+  - name: "cinder"
+    type: "block-storage"
     description: "Openstack Block Storage"
     endpoints:
-      - {'interface': 'internal', 'url': '{{ cinder_v3_internal_endpoint }}'}
-      - {'interface': 'public', 'url': '{{ cinder_v3_public_endpoint }}'}
+      - {'interface': 'internal', 'url': '{{ cinder_internal_endpoint }}'}
+      - {'interface': 'public', 'url': '{{ cinder_public_endpoint }}'}
 
 cinder_ks_users:
   - project: "service"
@@ -346,7 +330,26 @@ cinder_ks_users:
     password: "{{ cinder_keystone_password }}"
     role: "admin"
 
+cinder_ks_user_roles:
+  - project: "service"
+    user: "{{ cinder_keystone_user }}"
+    role: "service"
+
 ####################
 # TLS
 ####################
 cinder_enable_tls_backend: "{{ kolla_enable_tls_backend }}"
+
+############
+# Clustering
+############
+cinder_cluster_name: ""
+cinder_cluster_skip_precheck: false
+
+# Database
+cinder_database_enable_tls_internal: "{{ database_enable_tls_internal | bool }}"
+
+###################
+# Copy certificates
+###################
+cinder_copy_certs: "{{ kolla_copy_ca_into_containers | bool or cinder_enable_tls_backend | bool or cinder_database_enable_tls_internal | bool }}"

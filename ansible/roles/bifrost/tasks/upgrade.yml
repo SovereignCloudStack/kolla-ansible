@@ -1,5 +1,7 @@
 ---
 # Stop the container prior to redeploying it.
-- import_tasks: stop.yml
+- name: Stop bifrost containers
+  ansible.builtin.import_tasks: stop.yml
 
-- import_tasks: deploy.yml
+- name: Deploy bifrost
+  ansible.builtin.import_tasks: deploy.yml

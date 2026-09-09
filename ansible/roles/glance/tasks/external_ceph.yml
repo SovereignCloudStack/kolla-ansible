@@ -2,16 +2,14 @@
 - name: Ensuring glance service ceph config subdir exists
   vars:
     service: "{{ glance_services['glance-api'] }}"
-  file:
+  ansible.builtin.file:
     path: "{{ node_config_directory }}/glance-api/ceph"
     state: "directory"
     owner: "{{ config_owner_user }}"
     group: "{{ config_owner_group }}"
     mode: "0770"
   become: true
-  when:
-    - inventory_hostname in groups[service.group]
-    - service.enabled | bool
+  when: service | service_enabled_and_mapped_to_host
 
 - name: Copy over multiple ceph configs for Glance
   merge_configs:
@@ -23,24 +21,22 @@
   become: true
   when: inventory_hostname in groups['glance-api']
   with_items: "{{ glance_ceph_backends }}"
-  notify:
-    - Restart glance-api container
 
 - name: Copy over ceph Glance keyrings
-  template:
-    src: "{{ node_custom_config }}/glance/{{ item.cluster }}.{{ ceph_glance_keyring }}"
-    dest: "{{ node_config_directory }}/glance-api/ceph/{{ item.cluster }}.{{ ceph_glance_keyring }}"
+  vars:
+    keyring: "{{ item.cluster }}.client.{{ item.user }}.keyring"
+  ansible.builtin.template:
+    src: "{{ node_custom_config }}/glance/{{ keyring }}"
+    dest: "{{ node_config_directory }}/glance-api/ceph/{{ keyring }}"
     mode: "0660"
   become: true
   with_items: "{{ glance_ceph_backends }}"
   when: inventory_hostname in groups['glance-api']
-  notify:
-    - Restart glance-api container
 
 - name: Ensuring config directory has correct owner and permission
-  file:
+  ansible.builtin.file:
     path: "{{ node_config_directory }}/glance-api"
-    recurse: yes
+    recurse: true
     owner: "{{ config_owner_user }}"
     group: "{{ config_owner_group }}"
   become: true

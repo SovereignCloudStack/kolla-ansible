@@ -12,7 +12,14 @@
             "dest": "/etc/nginx/nginx.conf",
             "owner": "skyline",
             "perm": "0600"
-        }{% if skyline_enable_tls_backend | bool %},
+        }{% if skyline_custom_logos | length > 0 %},
+        {
+            "source": "{{ container_config_directory }}/logos",
+            "dest": "/var/lib/kolla/venv/lib/python3/site-packages/skyline_console/static",
+            "owner": "root",
+            "perm": "0644",
+            "merge": true
+        }{% endif %}{% if skyline_enable_tls_backend | bool %},
         {
             "source": "{{ container_config_directory }}/skyline-cert.pem",
             "dest": "/etc/skyline/certs/skyline-cert.pem",
@@ -24,13 +31,31 @@
             "dest": "/etc/skyline/certs/skyline-key.pem",
             "owner": "skyline",
             "perm": "0600"
+        }{% endif %}{% if kolla_copy_ca_into_containers | bool %},
+        {
+            "source": "{{ container_config_directory }}/ca-certificates",
+            "dest": "/var/lib/kolla/share/ca-certificates",
+            "owner": "root",
+            "perm": "0644"
         }{% endif %}
-        ],
-    "permissions": [
+    ],
+    "directories": [
+        {
+            "path": "/var/log/kolla",
+            "owner": "fluentd:kolla",
+            "perm": "2775"
+        },
         {
             "path": "/var/log/kolla/skyline",
-            "owner": "skyline:skyline",
-            "recurse": true
+            "owner": "skyline:kolla",
+            "perm": "2775"
+        }
+    ],
+    "permissions": [
+        {
+            "path": "/var/log/kolla/skyline/*.log",
+            "owner": "skyline:kolla",
+            "perm": "0664"
         }
     ]
 }

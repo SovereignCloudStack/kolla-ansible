@@ -1,5 +1,5 @@
 ---
-- name: "Copying over {{ project_name }} haproxy config"
+- name: "Copying over haproxy config for {{ project_name }}"
   vars:
     service: "{{ item.value }}"
     haproxy_templates:
@@ -9,7 +9,7 @@
       - "{{ node_custom_config }}/haproxy-config/{{ haproxy_service_template }}"
       - "templates/{{ haproxy_service_template }}"
     template_file: "{{ query('first_found', haproxy_templates) | first }}"
-  template:
+  ansible.builtin.template:
     src: "{{ template_file }}"
     dest: "{{ node_config_directory }}/haproxy/services.d/{{ item.key }}.cfg"
     mode: "0660"
@@ -19,14 +19,12 @@
     - service.haproxy is defined
     - enable_haproxy | bool
   with_dict: "{{ project_services }}"
-  notify:
-    - Restart haproxy container
 
-- name: "Add configuration for {{ project_name }} when using single external frontend"
+- name: "Add configuration when using single external frontend for {{ project_name }}"
   vars:
     service: "{{ item.value }}"
-  blockinfile:
-    create: yes
+  ansible.builtin.blockinfile:
+    create: true
     path: "{{ node_config_directory }}/haproxy/external-frontend-map"
     insertafter: EOF
     marker: "# {mark} {{ item.key }}"
@@ -49,13 +47,12 @@
     - service.enabled | bool
     - service.haproxy is defined
     - enable_haproxy | bool
-  notify:
-    - Restart haproxy container
 
 - name: "Configuring firewall for {{ project_name }}"
-  firewalld:
-    offline: "yes"
-    permanent: "yes"
+  ansible.posix.firewalld:
+    immediate: true
+    offline: true
+    permanent: true
     port: "{{ item.value.port }}/tcp"
     state: "enabled"
     zone: "{{ external_api_firewalld_zone }}"
@@ -68,5 +65,3 @@
     - enable_external_api_firewalld | bool
     - kolla_action != "config"
   with_dict: "{{ project_services | extract_haproxy_services }}"
-  notify:
-    - "Reload firewalld"

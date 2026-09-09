@@ -14,7 +14,7 @@ Enable the octavia service in ``globals.yml``:
 
 .. code-block:: yaml
 
-   enable_octavia: "yes"
+   enable_octavia: true
 
 Amphora provider
 ================
@@ -96,7 +96,7 @@ networks:
 
 .. code-block:: yaml
 
-   enable_neutron_provider_networks: yes
+   enable_neutron_provider_networks: true
 
 Configure the name of the network interface on the controllers used to access
 the Octavia management network. If using a VLAN provider network, ensure that
@@ -147,15 +147,15 @@ disk. you can customize this flavor by changing ``octavia_amp_flavor`` in
 See the ``os_nova_flavor`` Ansible module for details. Supported parameters
 are:
 
-- ``disk``
-- ``ephemeral`` (optional)
-- ``extra_specs`` (optional)
-- ``flavorid`` (optional)
-- ``is_public`` (optional)
-- ``name``
-- ``ram``
-- ``swap`` (optional)
-- ``vcpus``
+* ``disk``
+* ``ephemeral`` (optional)
+* ``extra_specs`` (optional)
+* ``flavorid`` (optional)
+* ``is_public`` (optional)
+* ``name``
+* ``ram``
+* ``swap`` (optional)
+* ``vcpus``
 
 The following defaults are used:
 
@@ -180,27 +180,27 @@ parameters:
 
 The network parameter has the following supported parameters:
 
-- ``external`` (optional)
-- ``mtu`` (optional)
-- ``name``
-- ``provider_network_type`` (optional)
-- ``provider_physical_network`` (optional)
-- ``provider_segmentation_id`` (optional)
-- ``shared`` (optional)
-- ``subnet``
+* ``external`` (optional)
+* ``mtu`` (optional)
+* ``name``
+* ``provider_network_type`` (optional)
+* ``provider_physical_network`` (optional)
+* ``provider_segmentation_id`` (optional)
+* ``shared`` (optional)
+* ``subnet``
 
 The subnet parameter has the following supported parameters:
 
-- ``allocation_pool_start`` (optional)
-- ``allocation_pool_end`` (optional)
-- ``cidr``
-- ``enable_dhcp`` (optional)
-- ``gateway_ip`` (optional)
-- ``name``
-- ``no_gateway_ip`` (optional)
-- ``ip_version`` (optional)
-- ``ipv6_address_mode`` (optional)
-- ``ipv6_ra_mode`` (optional)
+* ``allocation_pool_start`` (optional)
+* ``allocation_pool_end`` (optional)
+* ``cidr``
+* ``enable_dhcp`` (optional)
+* ``gateway_ip`` (optional)
+* ``name``
+* ``no_gateway_ip`` (optional)
+* ``ip_version`` (optional)
+* ``ipv6_address_mode`` (optional)
+* ``ipv6_ra_mode`` (optional)
 
 For example:
 
@@ -219,13 +219,13 @@ For example:
        allocation_pool_start: "10.1.2.100"
        allocation_pool_end: "10.1.2.200"
        gateway_ip: "10.1.2.1"
-       enable_dhcp: yes
+       enable_dhcp: true
 
 Deploy Octavia with Kolla Ansible:
 
 .. code-block:: console
 
-   kolla-ansible -i <inventory> deploy --tags common,horizon,octavia
+   kolla-ansible deploy -i <inventory> --tags horizon,octavia
 
 Once the installation is completed, you need to :ref:`register an amphora image
 in glance <octavia-amphora-image>`.
@@ -251,16 +251,6 @@ as follows:
 
    Ensure that you have executed ``kolla-ansible post-deploy`` and set
    ``enable_octavia`` to yes in ``global.yml``
-
-.. note::
-
-   In Train and earlier releases, resources should be registered in the
-   ``admin`` project. This is configured via ``octavia_service_auth_project``,
-   and may be set to ``service`` to avoid a breaking change when upgrading to
-   Ussuri. Changing the project on an existing system requires at a minimum
-   registering a new security group in the new project. Ideally the flavor and
-   network should be recreated in the new project, although this will impact
-   existing Amphorae.
 
 Amphora flavor
 ~~~~~~~~~~~~~~
@@ -333,14 +323,14 @@ Now deploy Octavia:
 
 .. code-block:: console
 
-   kolla-ansible -i <inventory> deploy --tags common,horizon,octavia
+   kolla-ansible deploy -i <inventory> --tags horizon,octavia
 
 .. _octavia-amphora-image:
 
 Amphora image
 -------------
 
-It is necessary to build an Amphora image. On CentOS / Rocky 9:
+It is necessary to build an Amphora image. On CentOS / Rocky 10:
 
 .. code-block:: console
 
@@ -436,6 +426,24 @@ Add ``octavia_network_type`` to ``globals.yml`` and set the value to ``tenant``
    octavia_network_type: "tenant"
 
 Next，follow the deployment instructions as normal.
+
+Failure handling
+----------------
+
+On large deployments, where neutron-openvswitch-agent sync could takes
+more then 5 minutes, you can get an error on octavia-interface.service
+systemd unit, because it can't wait either o-hm0 interface is already
+attached to br-int, or octavia management VxLAN is already configured
+on that host. In this case you have to add ``octavia_interface_wait_timeout``
+to ``globals.yml`` and set the value to new timeout in seconds
+
+.. code-block:: yaml
+
+   octavia_interface_wait_timeout: 1800
+
+On deployments with up to 2500 network ports per network node sync process
+could take up to 30mins. But you have to consider this value according
+to your deployment size.
 
 OVN provider
 ============

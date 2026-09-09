@@ -42,13 +42,31 @@
             "dest": "/etc/ceilometer/pipeline.yaml",
             "owner": "ceilometer",
             "perm": "0600"
+        }{% if kolla_copy_ca_into_containers | bool %},
+        {
+            "source": "{{ container_config_directory }}/ca-certificates",
+            "dest": "/var/lib/kolla/share/ca-certificates",
+            "owner": "root",
+            "perm": "0644"
+        }{% endif %}
+    ],
+    "directories": [
+        {
+            "path": "/var/log/kolla",
+            "owner": "fluentd:kolla",
+            "perm": "2775"
+        },
+        {
+            "path": "/var/log/kolla/ceilometer",
+            "owner": "ceilometer:kolla",
+            "perm": "2775"
         }
     ],
     "permissions": [
         {
-            "path": "/var/log/kolla/ceilometer",
-            "owner": "ceilometer:ceilometer",
-            "recurse": true
+            "path": "/var/log/kolla/ceilometer/*.log",
+            "owner": "ceilometer:kolla",
+            "perm": "0664"
         }
     ]
 }

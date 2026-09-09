@@ -18,9 +18,10 @@
 # 'cell_proxy_group' in 'cell_proxy_project_services' that will be the loop_var
 # in proxy_loadbalancer.yml.
 
-- import_tasks: proxy_loadbalancer.yml
+- name: Import tasks from proxy_loadbalancer.yml
+  ansible.builtin.import_tasks: proxy_loadbalancer.yml
   vars:
-    # Default is necessary because this play may not be targetting the hosts in
+    # Default is necessary because this play may not be targeting the hosts in
     # the nova-novncproxy group, and therefore they would not have role
     # defaults defined. If we put these variables in group_vars, then they
     # cannot be overridden by the inventory.
@@ -55,9 +56,10 @@
               - "timeout tunnel 1h"
   tags: always
 
-- import_tasks: proxy_loadbalancer.yml
+- name: Import tasks from proxy_loadbalancer.yml
+  ansible.builtin.import_tasks: proxy_loadbalancer.yml
   vars:
-    # Default is necessary because this play may not be targetting the hosts in
+    # Default is necessary because this play may not be targeting the hosts in
     # the nova-spicehtml5proxy group, and therefore they would not have role
     # defaults defined. If we put these variables in group_vars, then they
     # cannot be overridden by the inventory.
@@ -71,10 +73,10 @@
     cell_proxy_project_services:
       nova-spicehtml5proxy:
         group: "{{ nova_cell_spicehtml5proxy_group }}"
-        enabled: "{{ hostvars[groups[cell_proxy_group][0]]['nova_console'] == 'spice' }}"
+        enabled: "{{ hostvars[groups[cell_proxy_group][0]]['nova_console'] == 'spice' and (nova_spice_html5 | bool) }}"
         haproxy:
           nova_spicehtml5proxy:
-            enabled: "{{ hostvars[groups[cell_proxy_group][0]]['nova_console'] == 'spice' }}"
+            enabled: "{{ hostvars[groups[cell_proxy_group][0]]['nova_console'] == 'spice' and (nova_spice_html5 | bool) }}"
             mode: "http"
             external: false
             port: "{{ hostvars[groups[cell_proxy_group][0]]['nova_spicehtml5proxy_port'] }}"
@@ -82,7 +84,7 @@
             backend_http_extra:
               - "timeout tunnel {{ haproxy_nova_spicehtml5_proxy_tunnel_timeout }}"
           nova_spicehtml5proxy_external:
-            enabled: "{{ hostvars[groups[cell_proxy_group][0]]['nova_console'] == 'spice' }}"
+            enabled: "{{ hostvars[groups[cell_proxy_group][0]]['nova_console'] == 'spice' and (nova_spice_html5 | bool) }}"
             mode: "http"
             external: true
             external_fqdn: "{{ hostvars[groups[cell_proxy_group][0]]['nova_spicehtml5proxy_fqdn'] }}"
@@ -92,9 +94,10 @@
               - "timeout tunnel {{ haproxy_nova_spicehtml5_proxy_tunnel_timeout }}"
   tags: always
 
-- import_tasks: proxy_loadbalancer.yml
+- name: Import tasks from proxy_loadbalancer.yml
+  ansible.builtin.import_tasks: proxy_loadbalancer.yml
   vars:
-    # Default is necessary because this play may not be targetting the hosts in
+    # Default is necessary because this play may not be targeting the hosts in
     # the nova-serialproxy group, and therefore they would not have role
     # defaults defined. If we put these variables in group_vars, then they
     # cannot be overridden by the inventory.

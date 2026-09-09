@@ -9,22 +9,25 @@ Introduction
 
 Kolla Ansible (just like Kolla) uses the following release notes sections:
 
-- ``features`` --- for new features or functionality; these should ideally
+* ``features`` --- for new features or functionality; these should ideally
   refer to the blueprint being implemented;
-- ``fixes`` --- for fixes closing bugs; these must refer to the bug being
+* ``fixes`` --- for fixes closing bugs; these must refer to the bug being
   closed;
-- ``upgrade`` --- for notes relevant when upgrading from previous version;
+* ``upgrade`` --- for notes relevant when upgrading from previous version;
   these should ideally be added only between major versions; required when
   the proposed change affects behaviour in a non-backwards compatible way or
   generally changes something impactful;
-- ``deprecations`` --- to track deprecated features; relevant changes may
+* ``deprecations`` --- to track deprecated features; relevant changes may
   consist of only the commit message and the release note;
-- ``prelude`` --- filled in by the PTL before each release or RC.
+* ``prelude`` --- filled in by the PTL before each release or RC.
 
 Other release note types may be applied per common sense.
-Each change should include a release note unless being a ``TrivialFix``
-change or affecting only docs or CI. Such changes should `not` include
-a release note to avoid confusion.
+
+When a release note is required:
+
+- ``feature`` - best included with docs change (if separate from the code)
+- ``user impacting`` - to improve visibility of the change for users
+
 Remember release notes are mostly for end users which, in case of Kolla,
 are OpenStack administrators/operators.
 In case of doubt, the core team will let you know what is required.

@@ -5,12 +5,13 @@
     container_engine: "{{ kolla_container_engine }}"
     module_name: mysql_db
     module_args:
+      ca_cert: "{{ openstack_cacert if database_enable_tls_internal | bool else omit }}"
       login_host: "{{ database_address }}"
       login_port: "{{ database_port }}"
       login_user: "{{ nova_database_shard_root_user }}"
       login_password: "{{ database_password }}"
       name: "{{ item }}"
-  run_once: True
+  run_once: true
   with_items:
     - "{{ nova_cell0_database_name }}"
     - "{{ nova_api_database_name }}"
@@ -23,6 +24,7 @@
     container_engine: "{{ kolla_container_engine }}"
     module_name: mysql_user
     module_args:
+      ca_cert: "{{ openstack_cacert if database_enable_tls_internal | bool else omit }}"
       login_host: "{{ database_address }}"
       login_port: "{{ database_port }}"
       login_user: "{{ nova_database_shard_root_user }}"
@@ -41,16 +43,20 @@
       database_password: "{{ nova_api_database_password }}"
   loop_control:
     label: "{{ item.database_name }}"
-  run_once: True
+  run_once: true
   when:
     - not use_preconfigured_databases | bool
   no_log: true
 
-- import_tasks: config_bootstrap.yml
+- name: Import tasks from config_bootstrap.yml
+  ansible.builtin.import_tasks: config_bootstrap.yml
 
-- include_tasks: clone.yml
+- name: Include tasks from clone.yml
+  ansible.builtin.include_tasks: clone.yml
   when: nova_dev_mode | bool
 
-- import_tasks: bootstrap_service.yml
+- name: Run nova bootstrap container
+  ansible.builtin.import_tasks: bootstrap_service.yml
 
-- import_tasks: map_cell0.yml
+- name: Import tasks from map_cell0.yml
+  ansible.builtin.import_tasks: map_cell0.yml

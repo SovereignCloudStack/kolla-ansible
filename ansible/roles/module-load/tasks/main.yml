@@ -7,7 +7,7 @@
   block:
     - name: Load modules
       become: true
-      modprobe:
+      community.general.modprobe:
         name: "{{ item.name }}"
         params: "{{ item.params | default(omit) }}"
         state: "{{ item.state | default('present') }}"
@@ -17,9 +17,10 @@
 
     - name: Persist modules via modules-load.d
       become: true
-      template:
+      ansible.builtin.template:
         src: module-load.conf.j2
         dest: "/etc/modules-load.d/{{ item.name }}.conf"
+        mode: "0644"
       loop: "{{ modules }}"
       loop_control:
         label: "{{ item.name }}"
@@ -28,7 +29,7 @@
 
     - name: Drop module persistence
       become: true
-      file:
+      ansible.builtin.file:
         path: "/etc/modules-load.d/{{ item.name }}.conf"
         state: absent
       loop: "{{ modules }}"

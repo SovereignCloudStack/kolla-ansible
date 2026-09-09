@@ -1,7 +1,9 @@
 ---
-- import_tasks: config.yml
+- name: Configure letsencrypt
+  ansible.builtin.import_tasks: config.yml
 
-- import_tasks: check-containers.yml
+- name: Check letsencrypt containers
+  ansible.builtin.import_tasks: check-containers.yml
 
 - name: Flush handlers
-  meta: flush_handlers
+  ansible.builtin.meta: flush_handlers

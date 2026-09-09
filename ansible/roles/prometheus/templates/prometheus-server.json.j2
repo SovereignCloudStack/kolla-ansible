@@ -19,29 +19,46 @@
             "preserve_properties": true,
             "optional": true
         }
-{% if enable_prometheus_alertmanager | bool %}
-        ,{
+        {% if enable_prometheus_alertmanager | bool %},
+        {
             "source": "{{ container_config_directory }}/*.rules",
             "dest": "/etc/prometheus/",
             "optional": true,
             "owner": "prometheus",
             "perm": "0600"
+        }{% endif %}{% if kolla_copy_ca_into_containers | bool %},
+        {
+            "source": "{{ container_config_directory }}/ca-certificates",
+            "dest": "/var/lib/kolla/share/ca-certificates",
+            "owner": "root",
+            "perm": "0644"
+        }{% endif %}
+    ],
+    "directories": [
+        {
+            "path": "/var/log/kolla",
+            "owner": "fluentd:kolla",
+            "perm": "2775"
+        },
+        {
+            "path": "/var/log/kolla/prometheus",
+            "owner": "prometheus:kolla",
+            "perm": "2775"
         }
-{% endif %}
     ],
     "permissions": [
+        {
+            "path": "/var/log/kolla/prometheus/*.log",
+            "owner": "prometheus:kolla",
+            "perm": "0664"
+        },
         {
             "path": "/data",
             "owner": "prometheus:kolla",
             "recurse": true
         },
         {
-            "path": "/var/log/kolla/prometheus",
-            "owner": "prometheus:kolla",
-            "recurse": true
-        },
-        {
-            "path": "/etc/prometheus/extras/",
+            "path": "/etc/prometheus/extras",
             "owner": "prometheus:kolla",
             "recurse": true
         }

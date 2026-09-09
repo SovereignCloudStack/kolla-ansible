@@ -1,5 +1,6 @@
 ---
-- import_tasks: get_cell_settings.yml
+- name: Import tasks from get_cell_settings.yml
+  ansible.builtin.import_tasks: get_cell_settings.yml
   when:
     - inventory_hostname == groups[nova_conductor.group][0] | default(None)
 
@@ -7,11 +8,14 @@
   vars:
     nova_conductor: "{{ nova_cell_services['nova-conductor'] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     action: "start_container"
-    command: bash -c 'sudo -E kolla_set_configs && nova-manage cell_v2 create_cell{% if nova_cell_name %} --name {{ nova_cell_name }}{% endif %}'
+    command: >-
+      bash -c 'sudo -E kolla_set_configs &&
+      sudo kolla_copy_cacerts &&
+      nova-manage cell_v2 create_cell{% if nova_cell_name %} --name {{ nova_cell_name }}{% endif %}'
     common_options: "{{ docker_common_options }}"
-    detach: False
+    detach: false
     image: "{{ nova_conductor.image }}"
     labels:
       BOOTSTRAP:
@@ -26,18 +30,22 @@
     - '"already exists" not in nova_cell_create.stdout'
   when:
     - inventory_hostname == groups[nova_conductor.group][0] | default(None)
-    - nova_cell_settings | length == 0
+    - not nova_cell_settings | bool
 
 - name: Update cell
   vars:
-    nova_cell_database_url: "mysql+pymysql://{{ nova_cell_database_user }}:{{ nova_cell_database_password }}@{{ nova_cell_database_address | put_address_in_context('url') }}:{{ nova_cell_database_port }}/{{ nova_cell_database_name }}"  # noqa 204
+    nova_cell_database_url: "mysql+pymysql://{{ nova_cell_database_user }}:{{ nova_cell_database_password }}@\
+      {{ nova_cell_database_address | put_address_in_context('url') }}:{{ nova_cell_database_port }}/{{ nova_cell_database_name }}"
     nova_conductor: "{{ nova_cell_services['nova-conductor'] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     action: "start_container"
-    command: "bash -c 'sudo -E kolla_set_configs && nova-manage cell_v2 update_cell --cell_uuid {{ nova_cell_settings.cell_uuid }}'"
+    command: >-
+      bash -c 'sudo -E kolla_set_configs &&
+      sudo kolla_copy_cacerts &&
+      nova-manage cell_v2 update_cell --cell_uuid {{ nova_cell_settings.cell_uuid }}'
     common_options: "{{ docker_common_options }}"
-    detach: False
+    detach: false
     image: "{{ nova_conductor.image }}"
     labels:
       BOOTSTRAP:
@@ -51,5 +59,5 @@
     - nova_cell_updated.rc != 0
   when:
     - inventory_hostname == groups[nova_conductor.group][0] | default(None)
-    - nova_cell_settings | length > 0
+    - nova_cell_settings | bool
     - nova_cell_settings.cell_message_queue != nova_cell_rpc_transport_url or nova_cell_settings.cell_database != nova_cell_database_url

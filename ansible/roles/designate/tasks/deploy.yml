@@ -1,16 +1,22 @@
 ---
-- import_tasks: register.yml
+- name: Register designate in Keystone
+  ansible.builtin.import_tasks: register.yml
 
-- import_tasks: config.yml
+- name: Configure designate
+  ansible.builtin.import_tasks: config.yml
 
-- import_tasks: check-containers.yml
+- name: Check designate containers
+  ansible.builtin.import_tasks: check-containers.yml
 
-- include_tasks: clone.yml
+- name: Clone designate repository
+  ansible.builtin.include_tasks: clone.yml
   when: designate_dev_mode | bool
 
-- import_tasks: bootstrap.yml
+- name: Bootstrap designate service
+  ansible.builtin.import_tasks: bootstrap.yml
 
 - name: Flush handlers
-  meta: flush_handlers
+  ansible.builtin.meta: flush_handlers
 
-- import_tasks: update_pools.yml
+- name: Import tasks from update_pools.yml
+  ansible.builtin.import_tasks: update_pools.yml

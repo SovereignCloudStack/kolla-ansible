@@ -48,32 +48,22 @@ Kolla Ansible deploys containers for the following OpenStack projects:
 - `CloudKitty <https://docs.openstack.org/cloudkitty/latest/>`__
 - `Cyborg <https://docs.openstack.org/cyborg/latest/>`__
 - `Designate <https://docs.openstack.org/designate/latest/>`__
-- `Freezer <https://docs.openstack.org/freezer/latest/>`__
 - `Glance <https://docs.openstack.org/glance/latest/>`__
 - `Heat <https://docs.openstack.org/heat/latest/>`__
 - `Horizon <https://docs.openstack.org/horizon/latest/>`__
 - `Ironic <https://docs.openstack.org/ironic/latest/>`__
 - `Keystone <https://docs.openstack.org/keystone/latest/>`__
-- `Kuryr <https://docs.openstack.org/kuryr/latest/>`__
 - `Magnum <https://docs.openstack.org/magnum/latest/>`__
 - `Manila <https://docs.openstack.org/manila/latest/>`__
-- `Masakari <https://docs.openstack.org/masakari/latest/>`__ (deprecated)
+- `Masakari <https://docs.openstack.org/masakari/latest/>`__
 - `Mistral <https://docs.openstack.org/mistral/latest/>`__
-- `Murano <https://docs.openstack.org/murano/latest/>`__
 - `Neutron <https://docs.openstack.org/neutron/latest/>`__
 - `Nova <https://docs.openstack.org/nova/latest/>`__
 - `Octavia <https://docs.openstack.org/octavia/latest/>`__
-- `Sahara <https://docs.openstack.org/sahara/latest/>`__ (deprecated)
-- `Senlin <https://docs.openstack.org/senlin/latest/>`__
 - Skyline (`APIServer <https://docs.openstack.org/skyline-apiserver/latest/>`__ and `Console <https://docs.openstack.org/skyline-console/latest/>`__)
-- `Solum <https://docs.openstack.org/solum/latest/>`__
-- `Swift <https://docs.openstack.org/swift/latest/>`__
 - `Tacker <https://docs.openstack.org/tacker/latest/>`__
 - `Trove <https://docs.openstack.org/trove/latest/>`__
-- `Venus <https://docs.openstack.org/venus/latest/>`__
-- `Vitrage <https://docs.openstack.org/vitrage/latest/>`__ (deprecated)
 - `Watcher <https://docs.openstack.org/watcher/latest/>`__
-- `Zun <https://docs.openstack.org/zun/latest/>`__
 
 Infrastructure components
 -------------------------
@@ -81,8 +71,6 @@ Infrastructure components
 Kolla Ansible deploys containers for the following infrastructure components:
 
 - `Collectd <https://collectd.org/>`__,
-  `Telegraf <https://docs.influxdata.com/telegraf/>`__,
-  `InfluxDB <https://www.influxdata.com/products/influxdb-overview/>`__,
   `Prometheus <https://prometheus.io/>`__, and
   `Grafana <https://grafana.com/>`__ for performance monitoring.
 - `OpenSearch <https://opensearch.org/docs/latest/>`__ and
@@ -101,7 +89,7 @@ Kolla Ansible deploys containers for the following infrastructure components:
 - `Open vSwitch <https://www.openvswitch.org/>`__ for use with Neutron.
 - `RabbitMQ <https://www.rabbitmq.com/>`__ as a messaging backend for
   communication between services.
-- `Redis <https://redis.io/>`__ an in-memory data structure store.
+- `Valkey <https://valkey.io/>`__ an in-memory data structure store.
 
 Directories
 ===========
@@ -128,14 +116,16 @@ Getting Involved
 
 Need a feature? Find a bug? Let us know! Contributions are much
 appreciated and should follow the standard `Gerrit
-workflow <https://docs.openstack.org/infra/manual/developers.html>`__.
+workflow <https://docs.openstack.org/contributors/common/setup-gerrit.html>`__.
 
--  We communicate using the #openstack-kolla irc channel.
+-  We communicate using the #openstack-kolla IRC channel on OFTC.
 -  File bugs, blueprints, track releases, etc on
    `Launchpad <https://launchpad.net/kolla-ansible>`__.
 -  Attend weekly
    `meetings <https://docs.openstack.org/kolla/latest/contributor/meeting.html>`__.
 -  Contribute `code <https://opendev.org/openstack/kolla-ansible>`__.
+-  Please respect our `AI policy
+   <https://docs.openstack.org/kolla-ansible/latest/contributor/contributing.html#aipolicy>`__.
 
 Contributors
 ============

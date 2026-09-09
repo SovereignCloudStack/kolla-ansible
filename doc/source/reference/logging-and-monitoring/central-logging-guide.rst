@@ -16,7 +16,7 @@ the following:
 
 .. code-block:: yaml
 
-   enable_central_logging: "yes"
+   enable_central_logging: true
 
 OpenSearch
 ~~~~~~~~~~
@@ -33,6 +33,50 @@ By default OpenSearch is deployed on port ``9200``.
    Alternatively it is possible to use a local directory instead of the volume
    ``opensearch`` to store the data of OpenSearch. The path can be set via
    the variable ``opensearch_datadir_volume``.
+
+Applying log retention policies
+-------------------------------
+
+To stop your disks filling up, the Index State Management plugin for
+OpenSearch can be used to define log retention policies. A default
+retention policy is applied to all indices which match the
+``opensearch_log_index_prefix``. This policy first closes old indices,
+and then eventually deletes them. It can be customised via the following
+variables:
+
+* ``opensearch_apply_log_retention_policy``
+* ``opensearch_soft_retention_period_days``
+* ``opensearch_hard_retention_period_days``
+
+By default the soft and hard retention periods are 30 and 60 days
+respectively. If you are upgrading from ElasticSearch, and have previously
+configured ``elasticsearch_curator_soft_retention_period_days`` or
+``elasticsearch_curator_hard_retention_period_days``, those variables will
+be used instead of the defaults. You should migrate your configuration to
+use the new variable names before the Caracal release.
+
+Advanced users may wish to customise the retention policy, which
+is possible by overriding ``opensearch_retention_policy`` with
+a valid policy. See the `Index Management plugin documentation <https://opensearch.org/docs/latest/im-plugin/index/>`__
+for further details.
+
+Updating log retention policies
+-------------------------------
+
+By design, Kolla Ansible will NOT update an existing retention
+policy in OpenSearch. This is to prevent policy changes that may have
+been made via the OpenSearch Dashboards UI, or external tooling,
+from being wiped out.
+
+There are three options for modifying an existing policy:
+
+1. Via the OpenSearch Dashboards UI. See the `Index Management plugin documentation <https://opensearch.org/docs/latest/im-plugin/index/>`__
+for further details.
+
+2. Via the OpenSearch API using external tooling.
+
+3. By manually removing the existing policy via the OpenSearch Dashboards
+   UI (or API), before re-applying the updated policy with Kolla Ansible.
 
 OpenSearch Dashboards
 ~~~~~~~~~~~~~~~~~~~~~
@@ -51,20 +95,38 @@ If you want to prevent OpenSearch Dashboards being exposed on the external
 VIP, you can set ``enable_opensearch_dashboards_external`` to ``false`` in
 ``/etc/kolla/globals.yml``.
 
-First Login
------------
+Index Pattern Configuration
+---------------------------
 
-When OpenSearch Dashboards is opened for the first time, it requires creating
-a default index pattern. To view, analyse and search logs, at least one
-index pattern has to be created. To match indices stored in OpenSearch,
-we suggest using the following configuration:
+Kolla Ansible fully automates the creation of the default index pattern.
+During the deployment or reconfiguration process, an index pattern is
+automatically provisioned. By default, it is dynamically configured to
+match the indices defined by the ``opensearch_log_index_prefix``
+variable (which defaults to ``flog``). This results in an automatic
+index pattern of ``flog-*``.
 
-#. Index pattern - flog-*
-#. Time Filter field name - @timestamp
-#. Expand index pattern when searching [DEPRECATED] - not checked
-#. Use event times to create index names [DEPRECATED] - not checked
+The time filter field name is automatically set to ``@timestamp``,
+ensuring that all time-based aggregations and histograms work perfectly
+out of the box.
 
-After setting parameters, one can create an index with the *Create* button.
+As a result, the **Discover** tab is immediately ready to display
+incoming log data upon your first login, requiring no manual setup
+from the operator.
+
+**Adding Custom Index Patterns Manually**
+
+If you configure custom Fluentd outputs to route specific logs to
+different indices, or if you ingest external metrics into OpenSearch,
+you may still need to create additional index patterns manually.
+To do this:
+
+1. Navigate to **Dashboards Management** -> **Index Patterns** in the
+   OpenSearch Dashboards UI.
+2. Click **Create index pattern**.
+3. Define your custom index pattern (e.g., ``my-custom-logs-*``).
+4. Select the appropriate Time Filter field name (typically
+   ``@timestamp``).
+5. Click the **Create index pattern** button.
 
 Search logs - Discover tab
 --------------------------
@@ -232,3 +294,13 @@ network equipment. This can be done by configuring custom fluentd inputs.
 Configuration of custom fluentd inputs is possible by placing input
 configuration files in ``/etc/kolla/config/fluentd/input/*.conf`` on the
 control host.
+
+Systemd Logs
+------------
+
+By default, when enabling central logging, we also enable reading ``systemd``
+logs from the ``/var/log/journal`` file.
+
+To disable this behavior when central logging is enabled, set the value of
+the variable ``enable_fluentd_systemd`` to ``false`` in the configuration
+file ``/etc/kolla/globals.yml``.

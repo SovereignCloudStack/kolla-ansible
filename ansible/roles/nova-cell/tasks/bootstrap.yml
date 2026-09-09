@@ -5,6 +5,7 @@
     container_engine: "{{ kolla_container_engine }}"
     module_name: mysql_db
     module_args:
+      ca_cert: "{{ openstack_cacert if database_enable_tls_internal | bool else omit }}"
       login_host: "{{ nova_cell_database_address }}"
       login_port: "{{ nova_cell_database_port }}"
       login_user: "{{ nova_cell_database_admin_user }}"
@@ -20,6 +21,7 @@
     container_engine: "{{ kolla_container_engine }}"
     module_name: mysql_user
     module_args:
+      ca_cert: "{{ openstack_cacert if database_enable_tls_internal | bool else omit }}"
       login_host: "{{ nova_cell_database_address }}"
       login_port: "{{ nova_cell_database_port }}"
       login_user: "{{ nova_cell_database_admin_user }}"
@@ -34,10 +36,14 @@
     - inventory_hostname == groups[nova_cell_conductor_group][0]
   no_log: true
 
-- import_tasks: rabbitmq.yml
+- name: Import tasks from rabbitmq.yml
+  ansible.builtin.import_tasks: rabbitmq.yml
 
-- import_tasks: config_bootstrap.yml
+- name: Import tasks from config_bootstrap.yml
+  ansible.builtin.import_tasks: config_bootstrap.yml
 
-- import_tasks: bootstrap_service.yml
+- name: Run nova-cell bootstrap container
+  ansible.builtin.import_tasks: bootstrap_service.yml
 
-- import_tasks: create_cells.yml
+- name: Import tasks from create_cells.yml
+  ansible.builtin.import_tasks: create_cells.yml

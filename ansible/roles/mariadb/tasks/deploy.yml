@@ -1,6 +1,15 @@
 ---
-- import_tasks: config.yml
+- name: Configure mariadb
+  ansible.builtin.import_tasks: config.yml
 
-- import_tasks: check-containers.yml
+- name: Check mariadb containers
+  ansible.builtin.import_tasks: check-containers.yml
 
-- import_tasks: bootstrap.yml
+- name: Import tasks from recover_cluster.yml
+  ansible.builtin.import_tasks: recover_cluster.yml
+  vars:
+    mariadb_cluster_exists: true
+  when: migration_flag is defined
+
+- name: Bootstrap mariadb service
+  ansible.builtin.import_tasks: bootstrap.yml

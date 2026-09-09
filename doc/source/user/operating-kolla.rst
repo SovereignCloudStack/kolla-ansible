@@ -43,7 +43,7 @@ Upgrade procedure
 
 .. note::
 
-   If you have set ``enable_cells`` to ``yes`` then you should read the
+   If you have set ``enable_cells`` to ``true`` then you should read the
    upgrade notes in the :ref:`Nova cells guide<nova-cells-upgrade>`.
 
 Kolla's strategy for upgrades is to never make a mess and to follow consistent
@@ -56,6 +56,16 @@ deployment.
 Limitations and Recommendations
 -------------------------------
 
+.. warning::
+
+   Please notice that using the ansible ``--limit`` option is not recommended.
+   The reason is, that there are known bugs with it, e.g. when `upgrading parts of nova.
+   <https://bugs.launchpad.net/kolla-ansible/+bug/2054348>`__
+   We accept bug reports for this and try to fix issues when they are known.
+   The core problem is how the ``register:`` keyword works and how it
+   interacts with the ``--limit`` option. You can find more information in the above
+   bug report.
+
 .. note::
 
    Please note that when the ``use_preconfigured_databases`` flag is set to
@@ -65,26 +75,7 @@ Limitations and Recommendations
 .. note::
 
    If you have separate keys for nova and cinder, please be sure to set
-   ``ceph_nova_keyring: ceph.client.nova.keyring`` and ``ceph_nova_user: nova``
-   in ``/etc/kolla/globals.yml``
-
-Ubuntu Jammy 22.04
-------------------
-
-The Zed release adds support for Ubuntu Jammy 22.04 as a host operating
-system. Ubuntu Jammy 22.04 support will also be addeed to a Yoga stable
-release. Ubuntu Focal 20.04 users upgrading from Yoga should first upgrade
-OpenStack containers to Zed, which uses the Ubuntu Jammy 22.04 base container
-image. Hosts should then be upgraded to Ubuntu Jammy 22.04.
-
-CentOS Stream 8
----------------
-
-The Wallaby release adds support for CentOS Stream 8 as a host operating
-system. CentOS Stream 8 support will also be added to a Victoria stable
-release. CentOS Linux users upgrading from Victoria should first migrate hosts
-and container images from CentOS Linux to CentOS Stream before upgrading to
-Wallaby.
+   ``ceph_nova_user: nova`` in ``/etc/kolla/globals.yml``
 
 Preparation (the foreword)
 --------------------------
@@ -113,8 +104,14 @@ First, upgrade the ``kolla-ansible`` package:
    If you are running from Git repository, then just checkout the desired
    branch and run ``pip3 install --upgrade`` with the repository directory.
 
-If upgrading to a Yoga release or later, install or upgrade Ansible Galaxy
-dependencies:
+If performing a skip-level (SLURP) upgrade, update ``ansible`` or
+``ansible-core`` to a version supported by the release you're upgrading to.
+
+.. code-block:: console
+
+   pip3 install --upgrade 'ansible-core>=|ANSIBLE_CORE_VERSION_MIN|,<|ANSIBLE_CORE_VERSION_MAX|.99'
+
+Install or upgrade Ansible Galaxy dependencies:
 
 .. code-block:: console
 
@@ -130,8 +127,8 @@ most likely in
 
 Other files which may need manual updating are:
 
-- ``/etc/kolla/globals.yml``
-- ``/etc/kolla/passwords.yml``
+* ``/etc/kolla/globals.yml``
+* ``/etc/kolla/passwords.yml``
 
 For ``globals.yml``, it is best to follow the release notes (mentioned above).
 For ``passwords.yml``, one needs to use ``kolla-mergepwd`` and ``kolla-genpwd``
@@ -152,7 +149,7 @@ For example:
 .. code-block:: console
 
    cp /etc/kolla/passwords.yml passwords.yml.old
-   cp kolla-ansible/etc/kolla/passwords.yml passwords.yml.new
+   cp /path/to/venv/share/kolla-ansible/etc/kolla/passwords.yml passwords.yml.new
    kolla-genpwd -p passwords.yml.new
    kolla-mergepwd --old passwords.yml.old --new passwords.yml.new --final /etc/kolla/passwords.yml
 
@@ -177,6 +174,16 @@ issues:
 
 At a convenient time, the upgrade can now be run.
 
+SLURP extra preparations
+++++++++++++++++++++++++
+
+RabbitMQ has two major version releases per year but does not support jumping
+two versions in one upgrade. So if you want to perform a skip-level upgrade,
+you must first upgrade RabbitMQ to an intermediary version. Please see the
+`RabbitMQ SLURP section
+<https://docs.openstack.org/kolla-ansible/latest/reference/message-queues/rabbitmq.html#slurp>`__
+for details.
+
 Perform the Upgrade
 -------------------
 
@@ -190,22 +197,35 @@ After this command is complete, the containers will have been recreated from
 the new images and all database schema upgrades and similar actions performed
 for you.
 
-Cleanup the Keystone admin port (Zed only)
-------------------------------------------
 
-The Keystone admin port is no longer used in Zed. The admin interface points
-to the common port. However, during upgrade, the port is preserved for
-intermediate compatibility. To clean up the port, it is necessary to run
-the ``deploy`` action for Keystone. Additionally, the generated
-``admin-openrc.sh`` file may need regeneration as it used the admin
-port:
+CLI Command Completion
+~~~~~~~~~~~~~~~~~~~~~~
+
+Kolla Ansible supports shell command completion to make the CLI easier to use.
+
+To enable Bash completion, generate the completion script:
 
 .. code-block:: console
 
-   kolla-ansible deploy --tags keystone
-   kolla-ansible post-deploy
+   kolla-ansible complete --shell bash > ~/.kolla_ansible_completion.sh
 
-After these commands are complete, there are no leftovers of the admin port.
+Then, add the following line to your ``~/.bashrc`` file:
+
+.. code-block:: console
+
+   source ~/.kolla_ansible_completion.sh
+
+Finally, reload your shell configuration:
+
+.. code-block:: console
+
+   source ~/.bashrc
+
+.. note::
+
+   If you're using a shell other than Bash, replace ``--shell bash`` with your shell type,
+   e.g., ``zsh``, and adapt your shell's configuration file accordingly.
+
 
 Tips and Tricks
 ~~~~~~~~~~~~~~~
@@ -213,51 +233,52 @@ Tips and Tricks
 Kolla Ansible CLI
 -----------------
 
-When running the ``kolla-ansible`` CLI, additional arguments may be passed to
-``ansible-playbook`` via the ``EXTRA_OPTS`` environment variable.
-
-``kolla-ansible -i INVENTORY deploy`` is used to deploy and start all Kolla
+``kolla-ansible deploy -i INVENTORY`` is used to deploy and start all Kolla
 containers.
 
-``kolla-ansible -i INVENTORY destroy`` is used to clean up containers and
+``kolla-ansible destroy -i INVENTORY`` is used to clean up containers and
 volumes in the cluster.
 
-``kolla-ansible -i INVENTORY mariadb_recovery`` is used to recover a
+``kolla-ansible mariadb-recovery -i INVENTORY`` is used to recover a
 completely stopped mariadb cluster.
 
-``kolla-ansible -i INVENTORY prechecks`` is used to check if all requirements
-are meet before deploy for each of the OpenStack services.
+``kolla-ansible prechecks -i INVENTORY`` is used to check if all requirements
+are met before deployment for each of the OpenStack services.
 
-``kolla-ansible -i INVENTORY post-deploy`` is used to do post deploy on deploy
+``kolla-ansible post-deploy -i INVENTORY`` is used to do post deploy on deploy
 node to get the admin openrc file.
 
-``kolla-ansible -i INVENTORY pull`` is used to pull all images for containers.
+``kolla-ansible pull -i INVENTORY`` is used to pull all images for containers.
 
-``kolla-ansible -i INVENTORY reconfigure`` is used to reconfigure OpenStack
+``kolla-ansible reconfigure -i INVENTORY`` is used to reconfigure OpenStack
 service.
 
-``kolla-ansible -i INVENTORY upgrade`` is used to upgrades existing OpenStack
+``kolla-ansible upgrade -i INVENTORY`` is used to upgrades existing OpenStack
 Environment.
 
-``kolla-ansible -i INVENTORY stop`` is used to stop running containers.
+``kolla-ansible stop -i INVENTORY`` is used to stop running containers.
 
-``kolla-ansible -i INVENTORY deploy-containers`` is used to check and if
+``kolla-ansible deploy-containers -i INVENTORY`` is used to check and if
 necessary update containers, without generating configuration.
 
-``kolla-ansible -i INVENTORY prune-images`` is used to prune orphaned Docker
+``kolla-ansible prune-images -i INVENTORY`` is used to prune orphaned Docker
 images on hosts.
 
-``kolla-ansible -i INVENTORY genconfig`` is used to generate configuration
+``kolla-ansible genconfig -i INVENTORY`` is used to generate configuration
 files for enabled OpenStack services, without then restarting the containers so
 it is not applied right away.
 
-``kolla-ansible -i INVENTORY1 -i INVENTORY2 ...`` Multiple inventories can be
+``kolla-ansible validate-config -i INVENTORY`` is used to validate generated
+configuration files of enabled OpenStack services. By default, the results are
+saved to ``/var/log/kolla/config-validate`` when issues are detected.
+
+``kolla-ansible ... -i INVENTORY1 -i INVENTORY2`` Multiple inventories can be
 specified by passing the ``--inventory`` or ``-i`` command line option multiple
 times. This can be useful to share configuration between multiple environments.
 Any common configuration can be set in ``INVENTORY1`` and ``INVENTORY2`` can be
 used to set environment specific details.
 
-``kolla-ansible -i INVENTORY gather-facts`` is used to gather Ansible facts,
+``kolla-ansible gather-facts -i INVENTORY`` is used to gather Ansible facts,
 for example to populate a fact cache.
 
 Using Hashicorp Vault for password storage
@@ -294,6 +315,8 @@ Tools
 -----
 
 Kolla ships with several utilities intended to facilitate ease of operation.
+If you installed Kolla Ansible in a virtual environment, these scripts are
+located in ``/path/to/venv/share/kolla-ansible/tools/``.
 
 ``tools/cleanup-containers`` is used to remove deployed containers from the
 system. This can be useful when you want to do a new clean deployment. It will

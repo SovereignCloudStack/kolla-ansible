@@ -1,22 +1,18 @@
 ---
-- name: "Copying over {{ proxysql_project }} ProxySQL users config"
-  template:
+- name: "Copying over ProxySQL users config for {{ proxysql_project }}"
+  ansible.builtin.template:
     src: "users.yaml.j2"
     dest: "{{ node_config_directory }}/proxysql/users/{{ proxysql_project }}.yaml"
     mode: "0660"
   become: true
   when:
     - proxysql_config_users | bool
-  notify:
-    - Restart proxysql container
 
-- name: "Copying over {{ proxysql_project }} ProxySQL rules config"
-  template:
+- name: "Copying over ProxySQL rules config for {{ proxysql_project }}"
+  ansible.builtin.template:
     src: "rules.yaml.j2"
     dest: "{{ node_config_directory }}/proxysql/rules/{{ proxysql_project }}.yaml"
     mode: "0660"
   become: true
   when:
     - proxysql_config_rules | bool
-  notify:
-    - Restart proxysql container

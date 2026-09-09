@@ -48,16 +48,34 @@
             "dest": "/etc/rabbitmq/certs/{{ project_name }}-key.pem",
             "owner": "rabbitmq",
             "perm": "0600"
+        }{% endif %}{% if kolla_copy_ca_into_containers | bool %},
+        {
+            "source": "{{ container_config_directory }}/ca-certificates",
+            "dest": "/var/lib/kolla/share/ca-certificates",
+            "owner": "root",
+            "perm": "0644"
         }{% endif %}
+    ],
+    "directories": [
+        {
+            "path": "/var/log/kolla",
+            "owner": "fluentd:kolla",
+            "perm": "2775"
+        },
+        {
+            "path": "/var/log/kolla/rabbitmq",
+            "owner": "rabbitmq:kolla",
+            "perm": "2775"
+        }
     ],
     "permissions": [
         {
-            "path": "/var/lib/rabbitmq",
-            "owner": "rabbitmq:rabbitmq",
-            "recurse": true
+            "path": "/var/log/kolla/rabbitmq/*.log",
+            "owner": "rabbitmq:kolla",
+            "perm": "0664"
         },
         {
-            "path": "/var/log/kolla/{{ project_name }}",
+            "path": "/var/lib/rabbitmq",
             "owner": "rabbitmq:rabbitmq",
             "recurse": true
         }

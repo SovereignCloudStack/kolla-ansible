@@ -1,5 +1,7 @@
 ---
-- block:
+- name: Check host NTP daemon status
+  when: prechecks_enable_host_ntp_checks | bool
+  block:
     - name: Check for a running host NTP daemon  # noqa command-instead-of-module
       vars:
         prechecks_host_ntp_daemons:
@@ -9,7 +11,7 @@
           - ntpd
           - systemd-timesyncd
       become: true
-      command:
+      ansible.builtin.command:
         cmd: "systemctl is-active {{ prechecks_host_ntp_daemons | join(' ') }}"
       register: systemctl_is_active
       changed_when: false
@@ -17,7 +19,7 @@
       check_mode: false
 
     - name: Fail if a host NTP daemon is not running
-      fail:
+      ansible.builtin.fail:
         msg: >-
           No host NTP daemon is running.
           Please install and configure a host NTP daemon.
@@ -29,13 +31,13 @@
 
     - name: Checking timedatectl status
       become: true
-      command: timedatectl status
+      ansible.builtin.command: timedatectl status
       register: timedatectl_status
       changed_when: false
       check_mode: false
 
     - name: Fail if the clock is not synchronized
-      fail:
+      ansible.builtin.fail:
         msg: >-
           timedatectl sees the system clock as unsynchronized.
           Please wait for synchronization.
@@ -44,4 +46,3 @@
           'timedatectl status'.
       when:
         - "'synchronized: yes' not in timedatectl_status.stdout"
-  when: prechecks_enable_host_ntp_checks | bool

@@ -3,7 +3,7 @@
 
 - name: Ensuring config directories exist
   become: true
-  file:
+  ansible.builtin.file:
     path: "{{ node_config_directory }}/nova-api-bootstrap"
     state: "directory"
     owner: "{{ config_owner_user }}"
@@ -11,9 +11,21 @@
     mode: "0770"
   run_once: true
 
+- name: "Copy certificates and keys for {{ project_name }}"
+  ansible.builtin.import_role:
+    role: service-cert-copy
+  vars:
+    project_services:
+      nova-api-bootstrap:
+        group: "nova-api"
+        enabled: true
+  run_once: true
+  when:
+    - nova_copy_certs | bool
+
 - name: Copying over config.json files for nova-api-bootstrap
   become: true
-  template:
+  ansible.builtin.template:
     src: "nova-api-bootstrap.json.j2"
     dest: "{{ node_config_directory }}/nova-api-bootstrap/config.json"
     mode: "0660"

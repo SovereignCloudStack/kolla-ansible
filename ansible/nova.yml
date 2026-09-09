@@ -30,20 +30,24 @@
   gather_facts: false
   hosts:
     - nova-api
-    - '&enable_nova_True'
+    - "&enable_nova_True"
   tags:
     - nova
     - nova-bootstrap
     - nova-api
     - nova-api-bootstrap
   serial: '{{ kolla_serial|default("0") }}'
+  max_fail_percentage: >-
+    {{ nova_max_fail_percentage |
+       default(kolla_max_fail_percentage) |
+       default(100) }}
   tasks:
     # * Create nova API & cell0 DBs & users
     # * API DB schema migrations
     # * Map cell0
     # * Cell0 DB schema migrations
     - name: Bootstrap deploy
-      include_role:
+      ansible.builtin.include_role:
         name: nova
         tasks_from: bootstrap
       when:
@@ -53,7 +57,7 @@
     # * API DB schema migrations
     # * Cell0 DB schema migrations
     - name: Bootstrap upgrade
-      include_role:
+      ansible.builtin.include_role:
         name: nova
         tasks_from: bootstrap_upgrade
       when:
@@ -64,7 +68,7 @@
   gather_facts: false
   hosts:
     - nova-conductor
-    - '&enable_nova_True'
+    - "&enable_nova_True"
   tags:
     - nova
     - nova-bootstrap
@@ -79,7 +83,7 @@
     # * Cell DB schema migrations
     # * Create cell mappings
     - name: Bootstrap deploy
-      include_role:
+      ansible.builtin.include_role:
         name: nova-cell
         tasks_from: bootstrap
       when:
@@ -88,7 +92,7 @@
 
     # * Cell DB schema migrations
     - name: Bootstrap upgrade
-      include_role:
+      ansible.builtin.include_role:
         name: nova-cell
         tasks_from: bootstrap_upgrade
       when:
@@ -102,13 +106,17 @@
     - nova-api
     - nova-scheduler
     - nova-super-conductor
-    - '&enable_nova_True'
+    - "&enable_nova_True"
   tags:
     - nova
     - nova-api
     - nova-api-deploy
     - nova-api-upgrade
   serial: '{{ kolla_serial|default("0") }}'
+  max_fail_percentage: >-
+    {{ nova_max_fail_percentage |
+       default(kolla_max_fail_percentage) |
+       default(100) }}
   roles:
     - role: nova
       when: enable_nova | bool
@@ -123,13 +131,17 @@
     - nova-novncproxy
     - nova-serialproxy
     - nova-spicehtml5proxy
-    - '&enable_nova_True'
+    - "&enable_nova_True"
   tags:
     - nova
     - nova-cell
     - nova-cell-deploy
     - nova-cell-upgrade
   serial: '{{ kolla_serial|default("0") }}'
+  max_fail_percentage: >-
+    {{ nova_cell_max_fail_percentage |
+       default(kolla_max_fail_percentage) |
+       default(100) }}
   roles:
     - role: nova-cell
       when: enable_nova | bool
@@ -141,14 +153,19 @@
   gather_facts: false
   hosts:
     - nova-scheduler
-    - '&enable_nova_True'
+    - "&enable_nova_True"
   tags:
     - nova
     - nova-api
     - nova-refresh-scheduler-cell-cache
   serial: '{{ kolla_serial|default("0") }}'
+  max_fail_percentage: >-
+    {{ nova_max_fail_percentage |
+       default(kolla_max_fail_percentage) |
+       default(100) }}
   tasks:
-    - import_role:
+    - name: Refresh nova scheduler cell cache
+      ansible.builtin.import_role:
         name: nova
         tasks_from: refresh_scheduler_cell_cache
       when:
@@ -165,15 +182,20 @@
   gather_facts: false
   hosts:
     - nova-super-conductor
-    - '&enable_nova_True'
+    - "&enable_nova_True"
   tags:
     - nova
     - nova-reload
     - nova-api
     - nova-api-reload
   serial: '{{ kolla_serial|default("0") }}'
+  max_fail_percentage: >-
+    {{ nova_max_fail_percentage |
+       default(kolla_max_fail_percentage) |
+       default(100) }}
   tasks:
-    - import_role:
+    - name: Reload global nova super conductor services
+      ansible.builtin.import_role:
         name: nova
         tasks_from: reload_super_conductor
       when:
@@ -189,15 +211,20 @@
     - nova-novncproxy
     - nova-serialproxy
     - nova-spicehtml5proxy
-    - '&enable_nova_True'
+    - "&enable_nova_True"
   tags:
     - nova
     - nova-reload
     - nova-cell
     - nova-cell-reload
   serial: '{{ kolla_serial|default("0") }}'
+  max_fail_percentage: >-
+    {{ nova_cell_max_fail_percentage |
+       default(kolla_max_fail_percentage) |
+       default(100) }}
   tasks:
-    - import_role:
+    - name: Reload nova cell services
+      ansible.builtin.import_role:
         name: nova-cell
         tasks_from: reload
       when:
@@ -209,15 +236,20 @@
   hosts:
     - nova-api
     - nova-scheduler
-    - '&enable_nova_True'
+    - "&enable_nova_True"
   tags:
     - nova
     - nova-reload
     - nova-api
     - nova-api-reload
   serial: '{{ kolla_serial|default("0") }}'
+  max_fail_percentage: >-
+    {{ nova_max_fail_percentage |
+       default(kolla_max_fail_percentage) |
+       default(100) }}
   tasks:
-    - import_role:
+    - name: Reload nova API services
+      ansible.builtin.import_role:
         name: nova
         tasks_from: reload_api
       when:
@@ -231,15 +263,18 @@
   gather_facts: false
   hosts:
     - nova-api
-    - '&enable_nova_True'
+    - "&enable_nova_True"
   tags:
     - nova
     - nova-api
     - nova-online-data-migrations
     - nova-api-online-data-migrations
   serial: '{{ kolla_serial|default("0") }}'
+  # Fail all hosts if any of these once-per-cell tasks fails.
+  any_errors_fatal: true
   tasks:
-    - import_role:
+    - name: Run nova API online database migration
+      ansible.builtin.import_role:
         name: nova
         tasks_from: online_data_migrations
       when:
@@ -254,7 +289,7 @@
   gather_facts: false
   hosts:
     - nova-conductor
-    - '&enable_nova_True'
+    - "&enable_nova_True"
   tags:
     - nova
     - nova-cell
@@ -264,7 +299,8 @@
   # Fail all hosts if any of these once-per-cell tasks fails.
   any_errors_fatal: true
   tasks:
-    - import_role:
+    - name: Run nova cell online database migrations
+      ansible.builtin.import_role:
         name: nova-cell
         tasks_from: online_data_migrations
       when:

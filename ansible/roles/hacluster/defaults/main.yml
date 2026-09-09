@@ -42,16 +42,16 @@ hacluster_services:
 ####################
 
 hacluster_tag: "{{ openstack_tag }}"
-hacluster_corosync_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/hacluster-corosync"
-hacluster_corosync_tag: "{{ openstack_tag }}"
+hacluster_corosync_image: "{{ docker_image_url }}hacluster-corosync"
+hacluster_corosync_tag: "{{ hacluster_tag }}"
 hacluster_corosync_image_full: "{{ hacluster_corosync_image }}:{{ hacluster_corosync_tag }}"
 
-hacluster_pacemaker_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/hacluster-pacemaker"
-hacluster_pacemaker_tag: "{{ openstack_tag }}"
+hacluster_pacemaker_image: "{{ docker_image_url }}hacluster-pacemaker"
+hacluster_pacemaker_tag: "{{ hacluster_tag }}"
 hacluster_pacemaker_image_full: "{{ hacluster_pacemaker_image }}:{{ hacluster_pacemaker_tag }}"
 
-hacluster_pacemaker_remote_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/hacluster-pacemaker-remote"
-hacluster_pacemaker_remote_tag: "{{ openstack_tag }}"
+hacluster_pacemaker_remote_image: "{{ docker_image_url }}hacluster-pacemaker-remote"
+hacluster_pacemaker_remote_tag: "{{ hacluster_tag }}"
 hacluster_pacemaker_remote_image_full: "{{ hacluster_pacemaker_remote_image }}:{{ hacluster_pacemaker_remote_tag }}"
 
 hacluster_corosync_dimensions: "{{ default_container_dimensions }}"
@@ -60,20 +60,14 @@ hacluster_pacemaker_remote_dimensions: "{{ default_container_dimensions }}"
 
 hacluster_corosync_default_volumes:
   - "{{ node_config_directory }}/hacluster-corosync/:{{ container_config_directory }}/:ro"
-  - "/etc/localtime:/etc/localtime:ro"
-  - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "kolla_logs:/var/log/kolla/"
   - "hacluster_corosync:/var/lib/corosync"
 hacluster_pacemaker_default_volumes:
   - "{{ node_config_directory }}/hacluster-pacemaker/:{{ container_config_directory }}/:ro"
-  - "/etc/localtime:/etc/localtime:ro"
-  - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "kolla_logs:/var/log/kolla/"
   - "hacluster_pacemaker:/var/lib/pacemaker"
 hacluster_pacemaker_remote_default_volumes:
   - "{{ node_config_directory }}/hacluster-pacemaker-remote/:{{ container_config_directory }}/:ro"
-  - "/etc/localtime:/etc/localtime:ro"
-  - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "kolla_logs:/var/log/kolla/"
   - "hacluster_pacemaker_remote:/var/lib/pacemaker"
 

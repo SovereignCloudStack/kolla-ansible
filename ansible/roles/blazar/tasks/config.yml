@@ -1,21 +1,18 @@
 ---
 - name: Ensuring config directories exist
-  file:
+  ansible.builtin.file:
     path: "{{ node_config_directory }}/{{ item.key }}"
     state: "directory"
     owner: "{{ config_owner_user }}"
     group: "{{ config_owner_group }}"
     mode: "0770"
   become: true
-  when:
-    - inventory_hostname in groups[item.value.group]
-    - item.value.enabled | bool
-  with_dict: "{{ blazar_services }}"
+  with_dict: "{{ blazar_services | select_services_enabled_and_mapped_to_host }}"
 
 - name: Check if policies shall be overwritten
-  stat:
+  ansible.builtin.stat:
     path: "{{ item }}"
-  run_once: True
+  run_once: true
   delegate_to: localhost
   register: blazar_policy
   with_first_found:
@@ -25,28 +22,39 @@
       skip: true
 
 - name: Set blazar policy file
-  set_fact:
+  ansible.builtin.set_fact:
     blazar_policy_file: "{{ blazar_policy.results.0.stat.path | basename }}"
     blazar_policy_file_path: "{{ blazar_policy.results.0.stat.path }}"
   when:
-    - blazar_policy.results
+    - blazar_policy.results | length > 0
 
-- include_tasks: copy-certs.yml
+- name: Copying over TLS certificates
+  ansible.builtin.include_tasks: copy-certs.yml
   when:
-    - kolla_copy_ca_into_containers | bool
+    - blazar_copy_certs | bool
 
 - name: Copying over config.json files for services
-  template:
+  ansible.builtin.template:
     src: "{{ item.key }}.json.j2"
     dest: "{{ node_config_directory }}/{{ item.key }}/config.json"
     mode: "0660"
   become: true
+  with_dict: "{{ blazar_services | select_services_enabled_and_mapped_to_host }}"
+
+- name: "Configure uWSGI for blazar-api"
+  ansible.builtin.include_role:
+    name: service-uwsgi-config
+  vars:
+    project_services: "{{ blazar_services }}"
+    service: "{{ blazar_services['blazar-api'] }}"
+    service_name: "blazar-api"
+    service_uwsgi_config_http_port: "{{ blazar_api_listen_port }}"
+    service_uwsgi_config_log_file_chmod: "644"
+    service_uwsgi_config_module: "{{ service.wsgi }}"
+    service_uwsgi_config_uid: "blazar"
+    service_uwsgi_config_workers: "{{ blazar_api_workers }}"
   when:
-    - item.value.enabled | bool
-    - inventory_hostname in groups[item.value.group]
-  with_dict: "{{ blazar_services }}"
-  notify:
-    - Restart {{ item.key }} container
+    - service | service_enabled_and_mapped_to_host
 
 - name: Copying over blazar.conf
   vars:
@@ -61,23 +69,14 @@
     dest: "{{ node_config_directory }}/{{ item.key }}/blazar.conf"
     mode: "0660"
   become: true
-  when:
-    - item.value.enabled | bool
-    - inventory_hostname in groups[item.value.group]
-  with_dict: "{{ blazar_services }}"
-  notify:
-    - Restart {{ item.key }} container
+  with_dict: "{{ blazar_services | select_services_enabled_and_mapped_to_host }}"
 
 - name: Copying over existing policy file
-  template:
+  ansible.builtin.template:
     src: "{{ blazar_policy_file_path }}"
     dest: "{{ node_config_directory }}/{{ item.key }}/{{ blazar_policy_file }}"
     mode: "0660"
   become: true
   when:
     - blazar_policy_file is defined
-    - inventory_hostname in groups[item.value.group]
-    - item.value.enabled | bool
-  with_dict: "{{ blazar_services }}"
-  notify:
-    - Restart {{ item.key }} container
+  with_dict: "{{ blazar_services | select_services_enabled_and_mapped_to_host }}"

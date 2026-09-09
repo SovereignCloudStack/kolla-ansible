@@ -16,7 +16,7 @@ Enable Ironic in ``/etc/kolla/globals.yml``:
 
 .. code-block:: yaml
 
-   enable_ironic: "yes"
+   enable_ironic: true
 
 In the same file, define a network interface as the default NIC for dnsmasq and
 define a network to be used for the Ironic cleaning network:
@@ -26,7 +26,7 @@ define a network to be used for the Ironic cleaning network:
    ironic_dnsmasq_interface: "eth1"
    ironic_cleaning_network: "public1"
 
-Finally, define at least one DHCP range for Ironic inspector:
+Finally, define at least one DHCP range for Ironic inspection:
 
 .. code-block:: yaml
 
@@ -41,6 +41,26 @@ are possible by separating addresses with commas):
    ironic_dnsmasq_dhcp_ranges:
      - range: "192.168.5.100,192.168.5.110"
        routers: "192.168.5.1"
+
+Together with an router there can be provided the NTP (time source) server.
+For example it can be the same address as default router for the range:
+
+.. code-block:: yaml
+
+   ironic_dnsmasq_dhcp_ranges:
+     - range: "192.168.5.100,192.168.5.110"
+       routers: "192.168.5.1"
+       ntp_server: "192.168.5.1"
+
+Provide a DNS server if the inspection ramdisk (IPA) needs to resolve
+Fully Qualified Domain Names (FQDNs) for API access. To specify multiple
+servers, use a comma-separated list.
+
+.. code-block:: yaml
+
+  ironic_dnsmasq_dhcp_ranges:
+    - range: "192.168.5.100,192.168.5.110"
+      dns_servers: "192.168.5.10,192.168.5.11"
 
 To support DHCP relay, it is also possible to define a netmask in the range.
 It is advisable to also provide a router to allow the traffic to reach the
@@ -66,17 +86,17 @@ The default lease time for each range can be configured globally via
 ``ironic_dnsmasq_dhcp_default_lease_time`` variable or per range via
 ``lease_time`` parameter.
 
-In the same file, specify the PXE bootloader file for Ironic Inspector. The
+In the same file, specify the PXE bootloader file for Ironic inspection. The
 file is relative to the ``/var/lib/ironic/tftpboot`` directory. The default is
 ``pxelinux.0``, and should be correct for x86 systems. Other platforms may
-require a differentvalue, for example aarch64 on Debian requires
+require a different value, for example aarch64 on Debian requires
 ``debian-installer/arm64/bootnetaa64.efi``.
 
 .. code-block:: yaml
 
    ironic_dnsmasq_boot_file: pxelinux.0
 
-Ironic inspector also requires a deploy kernel and ramdisk to be placed in
+Ironic inspection also requires a deploy kernel and ramdisk to be placed in
 ``/etc/kolla/config/ironic/``. The following example uses coreos which is
 commonly used in Ironic deployments, though any compatible kernel/ramdisk may
 be used:
@@ -89,13 +109,49 @@ be used:
    $ curl https://tarballs.opendev.org/openstack/ironic-python-agent/dib/files/ipa-centos9-|KOLLA_BRANCH_NAME_DASHED|.initramfs \
      -o /etc/kolla/config/ironic/ironic-agent.initramfs
 
+For mixed x86_64 and aarch64 iPXE deployments, add the aarch64 IPA images
+with different filenames:
+
+.. code-block:: yaml
+
+   ironic_agent_arch_files:
+     aarch64:
+       kernel: ironic-agent-aarch64.kernel
+       initramfs: ironic-agent-aarch64.initramfs
+
+Place the additional files in ``/etc/kolla/config/ironic/``. Override
+``ironic_ipxe_bootfile_name_by_arch`` if the Ironic PXE image uses a
+non-standard bootloader filename.
+Set a node's ``cpu_arch`` property before Ironic-managed inspection so that
+Ironic selects the corresponding architecture-specific bootloader.
+
 You may optionally pass extra kernel parameters to the inspection kernel using:
 
 .. code-block:: yaml
 
-   ironic_inspector_kernel_cmdline_extras: ['ipa-lldp-timeout=90.0', 'ipa-collect-lldp=1']
+   ironic_kernel_cmdline_extras: ['ipa-lldp-timeout=90.0', 'ipa-collect-lldp=1']
 
 in ``/etc/kolla/globals.yml``.
+
+PXE filter (optional)
+~~~~~~~~~~~~~~~~~~~~~
+
+To keep parity with the standalone inspector you can enable the experimental
+PXE filter service:
+
+.. code-block:: yaml
+
+   enable_ironic_pxe_filter: true
+
+The PXE filter container runs alongside ``ironic-dnsmasq`` and cleans up stale
+DHCP entries. It is especially useful when auto discovery is enabled and when
+the dnsmasq DHCP range overlaps with a Neutron-served network. For the upstream
+details see
+https://docs.openstack.org/ironic/latest/admin/inspection/pxe_filter.html.
+
+.. note::
+
+   Upstream still classifies this PXE filter implementation as experimental.
 
 Configure conductor's HTTP server port (optional)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -106,11 +162,27 @@ The port used for conductor's HTTP server is controlled via
 
     ironic_http_port: "8089"
 
+Configure Ironic Python Agent NTP server (optional)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The Ironic Python Agent requires that the system clock is set correctly for
+the heartbeat mechanism to work. One way of achieving this is to pass
+the address of an NTP server via the kernel commandline, which is then
+used to set the system clock when IPA first starts. This is not a hard
+requirement, and you may use other methods. For example DHCP, or functionality
+built into the BMC.
+
+If you wish to use this option you can set ``ironic_ntp_server`` in
+``/etc/kolla/globals.yml``. Eg.
+
+.. code-block:: yaml
+
+    ironic_ntp_server: "192.168.33.3"
+
 Revert to plain PXE (not recommended)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Starting with Yoga, Ironic has changed the default PXE from plain PXE to iPXE.
 Kolla Ansible follows this upstream decision by choosing iPXE as the default
-for Ironic Inspector but allows users to revert to the previous default of
+for Ironic inspection but allows users to revert to the previous default of
 plain PXE by setting the following in
 ``/etc/kolla/globals.yml``:
 
@@ -133,20 +205,63 @@ keystone could be installed in one region (let's say region 1) and ironic -
 in another region (let's say region 2). In this case we don't install keystone
 together with ironic in region 2, but have to configure ironic to connect to
 existing keystone in region 1. To deploy ironic in this way we have to set
-variable ``enable_keystone`` to ``"no"``.
+variable ``enable_keystone`` to ``false``.
 
 .. code-block:: yaml
 
-    enable_keystone: "no"
+    enable_keystone: false
 
 It will prevent keystone from being installed in region 2.
 
 To add keystone-related sections in ironic.conf, it is also needed to set
-variable ``ironic_enable_keystone_integration`` to ``"yes"``
+variable ``ironic_enable_keystone_integration`` to ``true``
 
 .. code-block:: yaml
 
-    ironic_enable_keystone_integration: "yes"
+    ironic_enable_keystone_integration: true
+
+Avoiding problems with high availability
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. note::
+
+    This section assumes that you have not yet deployed the Nova Compute
+    Ironic service. If you have already deployed multiple instances of the
+    service and have one or more baremetal nodes registered, the following
+    operations are non-trivial. You will likely have to use the `nova-manage`
+    command (or pre-Caracal edit the DB) to ensure that all Ironic nodes
+    are registered with a single Nova Compute Ironic instance. This is
+    an advanced subject and is not covered here. Stop now if you don't
+    know what you are doing.
+
+Nova Compute Ironic HA is known to be unstable. Pending a better solution,
+a workaround is to avoid the feature by running a single Nova Compute Ironic
+instance. For example:
+
+.. code-block:: diff
+
+  - [nova-compute-ironic:children]
+  - nova
+  + [nova-compute-ironic]
+  + controller1
+
+If you choose to do this, it is helpful to pin the service host name
+to a 'synthetic' constant. This means that if you need to re-deploy the
+service to another host, the Ironic nodes will automatically use the new
+service instance. Otherwise you will need to manually move active Ironic nodes
+to the new service, with either the `nova-manage` CLI, or pre-Caracal, by
+editing the Nova database.
+
+The config option to pin the host name is `nova_compute_ironic_custom_host`
+and must be set as a group or host var. Note that, unless you know what you
+are doing, you must not change or set this option if you have already deployed
+Ironic nodes.
+
+This config option is also useful for Ironic Shards. Whilst these are not
+explicitly supported by Kolla Ansible, some further information can be found
+`here <https://specs.openstack.org/openstack/nova-specs/specs/2024.1/approved/ironic-shards.html>`__.
+
+Note that Ironic HA is not affected, and continues to work as normal.
 
 Deployment
 ~~~~~~~~~~
@@ -162,7 +277,7 @@ Post-deployment configuration
 The :ironic-doc:`Ironic documentation <install/configure-glance-images>`
 describes how to create the deploy kernel and ramdisk and register them with
 Glance. In this example we're reusing the same images that were fetched for the
-Inspector:
+inspection:
 
 .. code-block:: console
 
@@ -171,6 +286,17 @@ Inspector:
 
   openstack image create --disk-format ari --container-format ari --public \
     --file /etc/kolla/config/ironic/ironic-agent.initramfs deploy-initrd
+
+For mixed x86_64 and aarch64 deployments, register both IPA pairs with Glance
+and configure their image UUIDs in ``/etc/kolla/config/ironic.conf``:
+
+.. code-block:: ini
+
+   [conductor]
+   deploy_kernel_by_arch = x86_64:<x86-kernel-uuid>,aarch64:<aarch64-kernel-uuid>
+   deploy_ramdisk_by_arch = x86_64:<x86-ramdisk-uuid>,aarch64:<aarch64-ramdisk-uuid>
+
+Nodes using these defaults must have their ``cpu_arch`` property set.
 
 The :ironic-doc:`Ironic documentation <install/configure-nova-flavors>`
 describes how to create Nova flavors for bare metal.  For example:

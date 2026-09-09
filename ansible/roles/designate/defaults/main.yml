@@ -8,6 +8,7 @@ designate_services:
     volumes: "{{ designate_api_default_volumes + designate_api_extra_volumes }}"
     dimensions: "{{ designate_api_dimensions }}"
     healthcheck: "{{ designate_api_healthcheck }}"
+    wsgi: "designate.wsgi.api:application"
     haproxy:
       designate_api:
         enabled: "{{ enable_designate }}"
@@ -15,6 +16,10 @@ designate_services:
         external: false
         port: "{{ designate_api_port }}"
         listen_port: "{{ designate_api_listen_port }}"
+        backend_http_extra:
+          - "option httpchk GET /healthcheck"
+          - "http-check expect status 200"
+        tls_backend: "{{ designate_enable_tls_backend | bool }}"
       designate_api_external:
         enabled: "{{ enable_designate }}"
         mode: "http"
@@ -22,6 +27,10 @@ designate_services:
         external_fqdn: "{{ designate_external_fqdn }}"
         port: "{{ designate_api_public_port }}"
         listen_port: "{{ designate_api_listen_port }}"
+        backend_http_extra:
+          - "option httpchk GET /healthcheck"
+          - "http-check expect status 200"
+        tls_backend: "{{ designate_enable_tls_backend | bool }}"
   designate-backend-bind9:
     container_name: designate_backend_bind9
     group: designate-backend-bind9
@@ -94,8 +103,11 @@ designate_database_shard:
   users:
     - user: "{{ designate_database_user }}"
       password: "{{ designate_database_password }}"
+      shard_id: "{{ designate_database_shard_id }}"
   rules:
     - schema: "{{ designate_database_name }}"
+      shard_id: "{{ designate_database_shard_id }}"
+    - user: "{{ designate_database_user }}"
       shard_id: "{{ designate_database_shard_id }}"
 
 
@@ -104,31 +116,31 @@ designate_database_shard:
 ####################
 designate_tag: "{{ openstack_tag }}"
 
-designate_central_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/designate-central"
+designate_central_image: "{{ docker_image_url }}designate-central"
 designate_central_tag: "{{ designate_tag }}"
 designate_central_image_full: "{{ designate_central_image }}:{{ designate_central_tag }}"
 
-designate_producer_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/designate-producer"
+designate_producer_image: "{{ docker_image_url }}designate-producer"
 designate_producer_tag: "{{ designate_tag }}"
 designate_producer_image_full: "{{ designate_producer_image }}:{{ designate_producer_tag }}"
 
-designate_api_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/designate-api"
+designate_api_image: "{{ docker_image_url }}designate-api"
 designate_api_tag: "{{ designate_tag }}"
 designate_api_image_full: "{{ designate_api_image }}:{{ designate_api_tag }}"
 
-designate_backend_bind9_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/designate-backend-bind9"
+designate_backend_bind9_image: "{{ docker_image_url }}designate-backend-bind9"
 designate_backend_bind9_tag: "{{ designate_tag }}"
 designate_backend_bind9_image_full: "{{ designate_backend_bind9_image }}:{{ designate_backend_bind9_tag }}"
 
-designate_mdns_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/designate-mdns"
+designate_mdns_image: "{{ docker_image_url }}designate-mdns"
 designate_mdns_tag: "{{ designate_tag }}"
 designate_mdns_image_full: "{{ designate_mdns_image }}:{{ designate_mdns_tag }}"
 
-designate_sink_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/designate-sink"
+designate_sink_image: "{{ docker_image_url }}designate-sink"
 designate_sink_tag: "{{ designate_tag }}"
 designate_sink_image_full: "{{ designate_sink_image }}:{{ designate_sink_tag }}"
 
-designate_worker_image: "{{ docker_registry ~ '/' if docker_registry else '' }}{{ docker_namespace }}/designate-worker"
+designate_worker_image: "{{ docker_image_url }}designate-worker"
 designate_worker_tag: "{{ designate_tag }}"
 designate_worker_image_full: "{{ designate_worker_image }}:{{ designate_worker_tag }}"
 
@@ -144,7 +156,12 @@ designate_api_enable_healthchecks: "{{ enable_container_healthchecks }}"
 designate_api_healthcheck_interval: "{{ default_container_healthcheck_interval }}"
 designate_api_healthcheck_retries: "{{ default_container_healthcheck_retries }}"
 designate_api_healthcheck_start_period: "{{ default_container_healthcheck_start_period }}"
-designate_api_healthcheck_test: ["CMD-SHELL", "healthcheck_curl http://{{ api_interface_address | put_address_in_context('url') }}:{{ designate_api_listen_port }}"]
+designate_api_healthcheck_test:
+  - "CMD-SHELL"
+  - >-
+    healthcheck_curl {{
+    'https' if designate_enable_tls_backend | bool else 'http' }}://{{
+    api_interface_address | put_address_in_context('url') }}:{{ designate_api_listen_port }}/healthcheck
 designate_api_healthcheck_timeout: "{{ default_container_healthcheck_timeout }}"
 designate_api_healthcheck:
   interval: "{{ designate_api_healthcheck_interval }}"
@@ -233,46 +250,39 @@ designate_sink_healthcheck:
 
 designate_api_default_volumes:
   - "{{ node_config_directory }}/designate-api/:{{ container_config_directory }}/:ro"
-  - "/etc/localtime:/etc/localtime:ro"
-  - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "kolla_logs:/var/log/kolla/"
-  - "{{ kolla_dev_repos_directory ~ '/designate/designate:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/designate' if designate_dev_mode | bool else '' }}"
+  - "{{ '/dev/shm:/dev/shm' }}"
+  - "{{ kolla_dev_repos_directory ~ '/designate:/dev-mode/designate' if designate_dev_mode | bool else '' }}"
 designate_backend_bind9_default_volumes:
   - "{{ node_config_directory }}/designate-backend-bind9/:{{ container_config_directory }}/:ro"
-  - "/etc/localtime:/etc/localtime:ro"
-  - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "kolla_logs:/var/log/kolla/"
+  - "{{ '/dev/shm:/dev/shm' }}"
   - "designate_backend_bind9:/var/lib/named/"
 designate_central_default_volumes:
   - "{{ node_config_directory }}/designate-central/:{{ container_config_directory }}/:ro"
-  - "/etc/localtime:/etc/localtime:ro"
-  - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "kolla_logs:/var/log/kolla/"
-  - "{{ kolla_dev_repos_directory ~ '/designate/designate:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/designate' if designate_dev_mode | bool else '' }}"
+  - "{{ '/dev/shm:/dev/shm' }}"
+  - "{{ kolla_dev_repos_directory ~ '/designate:/dev-mode/designate' if designate_dev_mode | bool else '' }}"
 designate_mdns_default_volumes:
   - "{{ node_config_directory }}/designate-mdns/:{{ container_config_directory }}/:ro"
-  - "/etc/localtime:/etc/localtime:ro"
-  - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "kolla_logs:/var/log/kolla/"
-  - "{{ kolla_dev_repos_directory ~ '/designate/designate:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/designate' if designate_dev_mode | bool else '' }}"
+  - "{{ '/dev/shm:/dev/shm' }}"
+  - "{{ kolla_dev_repos_directory ~ '/designate:/dev-mode/designate' if designate_dev_mode | bool else '' }}"
 designate_producer_default_volumes:
   - "{{ node_config_directory }}/designate-producer/:{{ container_config_directory }}/:ro"
-  - "/etc/localtime:/etc/localtime:ro"
-  - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "kolla_logs:/var/log/kolla/"
-  - "{{ kolla_dev_repos_directory ~ '/designate/designate:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/designate' if designate_dev_mode | bool else '' }}"
+  - "{{ '/dev/shm:/dev/shm' }}"
+  - "{{ kolla_dev_repos_directory ~ '/designate:/dev-mode/designate' if designate_dev_mode | bool else '' }}"
 designate_worker_default_volumes:
   - "{{ node_config_directory }}/designate-worker/:{{ container_config_directory }}/:ro"
-  - "/etc/localtime:/etc/localtime:ro"
-  - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "kolla_logs:/var/log/kolla/"
-  - "{{ kolla_dev_repos_directory ~ '/designate/designate:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/designate' if designate_dev_mode | bool else '' }}"
+  - "{{ '/dev/shm:/dev/shm' }}"
+  - "{{ kolla_dev_repos_directory ~ '/designate:/dev-mode/designate' if designate_dev_mode | bool else '' }}"
 designate_sink_default_volumes:
   - "{{ node_config_directory }}/designate-sink/:{{ container_config_directory }}/:ro"
-  - "/etc/localtime:/etc/localtime:ro"
-  - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
   - "kolla_logs:/var/log/kolla/"
-  - "{{ kolla_dev_repos_directory ~ '/designate/designate:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/designate' if designate_dev_mode | bool else '' }}"
+  - "{{ '/dev/shm:/dev/shm' }}"
+  - "{{ kolla_dev_repos_directory ~ '/designate:/dev-mode/designate' if designate_dev_mode | bool else '' }}"
 
 designate_extra_volumes: "{{ default_extra_volumes }}"
 designate_api_extra_volumes: "{{ designate_extra_volumes }}"
@@ -313,6 +323,7 @@ designate_dnssec_validation: "yes"
 designate_recursion: "no"
 ## Example for designate_forwarders_addresses: "10.199.200.1; 10.199.100.1"
 designate_forwarders_addresses: ""
+designate_backend_bind9_cmdline_extras: "-U {{ designate_backend_bind9_workers }} -g"
 
 ####################
 # Infoblox
@@ -352,3 +363,18 @@ designate_ks_users:
     user: "{{ designate_keystone_user }}"
     password: "{{ designate_keystone_password }}"
     role: "admin"
+
+###################
+# Database
+###################
+designate_database_enable_tls_internal: "{{ database_enable_tls_internal | bool }}"
+
+###################
+# Copy certificates
+###################
+designate_copy_certs: "{{ kolla_copy_ca_into_containers | bool or designate_database_enable_tls_internal | bool or designate_enable_tls_backend | bool }}"
+
+###################
+# TLS
+###################
+designate_enable_tls_backend: "{{ kolla_enable_tls_backend }}"

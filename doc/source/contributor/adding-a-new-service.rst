@@ -16,12 +16,6 @@ which Kolla uses throughout and which should be followed.
   this should be updated with appropriate roles, tags, and conditions. Ensure
   also that supporting hosts such as haproxy are updated when necessary.
 
-* The common role
-
-  A ``common`` role exists which sets up logging, ``kolla-toolbox`` and other
-  supporting components. This should be included in all services within
-  ``meta/main.yml`` of your role.
-
 * Common tasks
 
   All services should include the following tasks:
@@ -42,10 +36,10 @@ which Kolla uses throughout and which should be followed.
 * Log rotation
 
   - For OpenStack services there should be a ``cron-logrotate-PROJECT.conf.j2``
-    template file in ``ansible/roles/common/templates`` with the following
+    template file in ``ansible/roles/cron/templates`` with the following
     content:
 
-    .. path ansible/roles/common/templates/cron-logrotate-PROJECT.conf.j2
+    .. path ansible/roles/cron/templates/cron-logrotate-PROJECT.conf.j2
     .. code-block:: console
 
        "/var/log/kolla/PROJECT/*.log"
@@ -53,14 +47,14 @@ which Kolla uses throughout and which should be followed.
        }
 
   - For OpenStack services there should be an entry in the ``services`` list
-    in the ``cron.json.j2`` template file in ``ansible/roles/common/templates``.
+    in the ``cron.json.j2`` template file in ``ansible/roles/cron/templates``.
 
 * Log delivery
 
   - For OpenStack services the service should add a new ``rewriterule`` in the
     ``match`` element in the ``01-rewrite.conf.j2`` template file in
-    ``ansible/roles/common/templates/conf/filter`` to deliver log messages to
-    Elasticsearch.
+    ``ansible/roles/fluentd/templates/conf/filter`` to deliver log messages to
+    Opensearch.
 
 * Documentation
 
@@ -76,16 +70,16 @@ which Kolla uses throughout and which should be followed.
 
 Other than the above, most service roles abide by the following pattern:
 
-- ``Register``: Involves registering the service with Keystone, creating
+* ``Register``: Involves registering the service with Keystone, creating
   endpoints, roles, users, etc.
 
-- ``Config``: Distributes the config files to the nodes to be pulled into
+* ``Config``: Distributes the config files to the nodes to be pulled into
   the container on startup.
 
-- ``Bootstrap``: Creating the database (but not tables), database user for
+* ``Bootstrap``: Creating the database (but not tables), database user for
   the service, permissions, etc.
 
-- ``Bootstrap Service``: Starts a one shot container on the host to create
+* ``Bootstrap Service``: Starts a one shot container on the host to create
   the database tables, and other initial run time config.
 
 Ansible handlers are used to create or restart containers when necessary.

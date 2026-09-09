@@ -1,29 +1,32 @@
 ---
 - name: Ensure yum repos directory exists
-  file:
+  become: true
+  ansible.builtin.file:
     path: /etc/yum.repos.d/
     state: directory
-    recurse: yes
-  become: True
+    recurse: true
 
 - name: Install centos-release-ceph
-  dnf:
+  become: true
+  ansible.builtin.dnf:
     name: "centos-release-ceph-{{ cephadm_ceph_release }}"
-  become: True
   when: cephadm_use_package_from_distribution
 
 - name: Enable Ceph base yum repository
-  yum_repository:
+  become: true
+  ansible.builtin.yum_repository:
     name: "{{ item.shortname }}"
     description: "{{ item.name }}"
     baseurl: "{{ item.url }}"
     gpgkey: "{{ cephadm_ceph_rpm_gpg_key }}"
   loop: "{{ cephadm_ceph_rpm_repos }}"
-  become: True
   when: not cephadm_use_package_from_distribution
 
-- name: Install cephadm
-  dnf:
-    name: "cephadm"
-    install_weak_deps: False
-  become: True
+# NOTE(mnasiadka): cephadm bootstrap failing on jinja2 missing
+- name: Install cephadm and jinja2
+  become: true
+  ansible.builtin.dnf:
+    name:
+      - cephadm
+      - python3-jinja2
+    install_weak_deps: false

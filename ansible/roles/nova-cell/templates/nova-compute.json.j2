@@ -6,6 +6,12 @@
             "dest": "/etc/nova/nova.conf",
             "owner": "nova",
             "perm": "0600"
+        },
+        {
+            "source": "{{ container_config_directory }}/compute_id",
+            "dest": "/var/lib/nova/compute_id",
+            "owner": "nova",
+            "perm": "0600"
         }{% if nova_policy_file is defined %},
         {
             "source": "{{ container_config_directory }}/{{ nova_policy_file }}",
@@ -14,20 +20,14 @@
             "perm": "0600"
         }{% endif %}{% if nova_backend == "rbd" %},
         {
-            "source": "{{ container_config_directory }}/ceph.{{ ceph_nova_keyring }}",
-            "dest": "/etc/ceph/ceph.{{ ceph_nova_keyring }}",
+            "source": "{{ container_config_directory }}/{{ nova_cell_ceph_backend['cluster'] }}.client.{{ nova_cell_ceph_backend['vms']['user'] }}.keyring",
+            "dest": "/etc/ceph/{{ nova_cell_ceph_backend['cluster'] }}.client.{{ nova_cell_ceph_backend['vms']['user'] }}.keyring",
             "owner": "nova",
             "perm": "0600"
         },
         {
-            "source": "{{ container_config_directory }}/{{ nova_ceph_cluster }}.conf",
-            "dest": "/etc/ceph/{{ nova_ceph_cluster }}.conf",
-            "owner": "nova",
-            "perm": "0600"
-        }{% endif %}{% if nova_compute_virt_type == "vmware" and not vmware_vcenter_insecure | bool %},
-        {
-            "source": "{{ container_config_directory }}/vmware_ca",
-            "dest": "/etc/nova/vmware_ca",
+            "source": "{{ container_config_directory }}/{{ nova_cell_ceph_backend['cluster'] }}.conf",
+            "dest": "/etc/ceph/{{ nova_cell_ceph_backend['cluster'] }}.conf",
             "owner": "nova",
             "perm": "0600"
         }{% endif %}{% if libvirt_tls | bool %},
@@ -55,6 +55,12 @@
             "owner": "nova",
             "perm": "0600",
             "optional": true
+        },
+        {
+            "source": "{{ container_config_directory }}/hostnqn",
+            "dest": "/etc/nvme/hostnqn",
+            "owner": "root",
+            "perm": "0644"
         }{% if nova_compute_virt_type in ['kvm', 'qemu'] and libvirt_enable_sasl | bool %},
         {
             "source": "{{ container_config_directory }}/auth.conf",
@@ -67,18 +73,53 @@
             "dest": "/etc/nova/provider_config/provider_config.yaml",
             "owner": "nova",
             "perm": "0600"
+        }{% endif %}{% if vendordata_file_path is defined %},
+        {
+            "source": "{{ container_config_directory }}/vendordata.json",
+            "dest": "/etc/nova/vendordata.json",
+            "owner": "nova",
+            "perm": "0600"
+        }{% endif %}{% if kolla_copy_ca_into_containers | bool %},
+        {
+            "source": "{{ container_config_directory }}/ca-certificates",
+            "dest": "/var/lib/kolla/share/ca-certificates",
+            "owner": "root",
+            "perm": "0644"
+        }{% endif %}{% if enable_multipathd | bool %},
+        {
+            "source": "{{ container_config_directory }}/multipath.conf",
+            "dest": "/etc/multipath.conf",
+            "owner": "root",
+            "perm": "0644"
         }{% endif %}
+    ],
+    "directories": [
+        {
+            "path": "/var/log/kolla",
+            "owner": "fluentd:kolla",
+            "perm": "2775"
+        },
+        {
+            "path": "/var/log/kolla/nova",
+            "owner": "nova:kolla",
+            "perm": "2775"
+        }
     ],
     "permissions": [
         {
-            "path": "/var/log/kolla/nova",
-            "owner": "nova:nova",
-            "recurse": true
+            "path": "/var/log/kolla/nova/*.log",
+            "owner": "nova:kolla",
+            "perm": "0664"
         },
         {
             "path": "/var/lib/nova",
             "owner": "nova:nova",
             "recurse": true
-        }
+        }{% if enable_shared_var_lib_nova_mnt | bool %},
+        {
+            "path": "/var/lib/nova-mnt",
+            "owner": "nova:nova",
+            "recurse": true
+        }{% endif %}
     ]
 }

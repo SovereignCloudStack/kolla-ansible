@@ -19,9 +19,9 @@ Host machine requirements
 
 The host machine must satisfy the following minimum requirements:
 
-- 2 network interfaces
-- 8GB main memory
-- 40GB disk space
+* 2 network interfaces
+* 8GB main memory
+* 40GB disk space
 
 See the :kolla-ansible-doc:`support matrix <user/support-matrix>` for details
 of supported host Operating Systems. Kolla Ansible supports the default Python
@@ -48,24 +48,24 @@ execution, which is described in
 
 #. Install Python build dependencies:
 
-   For CentOS, RHEL or openEuler, run:
+   For Rocky, run:
 
    .. code-block:: console
 
-      sudo dnf install python3-devel libffi-devel gcc openssl-devel python3-libselinux
+      sudo dnf install git python3-devel libffi-devel gcc openssl-devel python3-libselinux
 
    For Debian or Ubuntu, run:
 
    .. code-block:: console
 
-      sudo apt install python3-dev libffi-dev gcc libssl-dev
+      sudo apt install git python3-dev libffi-dev gcc libssl-dev libdbus-glib-1-dev
 
 Install dependencies for the virtual environment
 ------------------------------------------------
 
 #. Install the virtual environment dependencies.
 
-   For CentOS, RHEL or openEuler, you don't need to do anything.
+   For Rocky, you don't need to do anything.
 
    For Debian or Ubuntu, run:
 
@@ -89,13 +89,6 @@ Install dependencies for the virtual environment
 
       pip install -U pip
 
-#. Install `Ansible <http://www.ansible.com>`__. Kolla Ansible requires at least
-   Ansible ``4`` and supports up to ``5``.
-
-   .. code-block:: console
-
-      pip install 'ansible>=4,<6'
-
 Install Kolla-ansible
 ~~~~~~~~~~~~~~~~~~~~~
 
@@ -105,11 +98,11 @@ Install Kolla-ansible
 
       git clone --branch |KOLLA_BRANCH_NAME| https://opendev.org/openstack/kolla-ansible
 
-#. Install requirements of ``kolla`` and ``kolla-ansible``:
+#. Install ``kolla-ansible`` and its dependencies:
 
    .. code-block:: console
 
-      pip install ./kolla-ansible
+      pip install -e ./kolla-ansible
 
 #. Create the ``/etc/kolla`` directory.
 
@@ -167,8 +160,7 @@ manually or by running random password generator:
 
 .. code-block:: console
 
-   cd kolla-ansible/tools
-   ./generate_passwords.py
+   kolla-genpwd
 
 Kolla globals.yml
 -----------------
@@ -188,16 +180,28 @@ There are a few options that are required to deploy Kolla Ansible:
 
   Kolla provides choice of several Linux distributions in containers:
 
-  - CentOS Stream (``centos``)
   - Debian (``debian``)
   - Rocky (``rocky``)
   - Ubuntu (``ubuntu``)
 
-  For newcomers, we recommend to use Rocky Linux 9 or Ubuntu 22.04.
+  For newcomers, we recommend to use Rocky Linux 10 or Ubuntu 24.04.
 
   .. code-block:: console
 
      kolla_base_distro: "rocky"
+
+* AArch64 options
+
+  Kolla provides images for both x86-64 and aarch64 architectures. They are not
+  "multiarch" so users of aarch64 need to define "openstack_tag_suffix"
+  setting:
+
+  .. code-block:: console
+
+     openstack_tag_suffix: "-aarch64"
+
+  This way images built for aarch64 architecture will be used.
+
 
 * Networking
 
@@ -238,7 +242,7 @@ There are a few options that are required to deploy Kolla Ansible:
 
   By default Kolla Ansible provides a bare compute kit, however it does provide
   support for a vast selection of additional services. To enable them, set
-  ``enable_*`` to "yes".
+  ``enable_*`` to ``true``.
 
   Kolla now supports many OpenStack services, there is
   `a list of available services
@@ -277,28 +281,28 @@ need to setup basic host-level dependencies, like docker.
 Kolla Ansible provides a playbook that will install all required services in
 the correct versions.
 
-The following assumes the use of the ``all-in-one`` inventory. If using a
-different inventory, such as ``multinode``, replace the ``-i`` argument
-accordingly.
+The following assumes the use of the ``all-in-one`` inventory in your
+current directory.
+If using a different inventory, such as ``multinode``, replace the ``-i``
+argument accordingly.
 
 #. Bootstrap servers with kolla deploy dependencies:
 
   .. code-block:: console
 
-     cd kolla-ansible/tools
-     ./kolla-ansible -i ../../all-in-one bootstrap-servers
+     kolla-ansible bootstrap-servers -i all-in-one
 
 #. Do pre-deployment checks for hosts:
 
   .. code-block:: console
 
-     kolla-ansible -i ../../all-in-one prechecks
+     kolla-ansible prechecks -i all-in-one
 
 #. Finally proceed to actual OpenStack deployment:
 
   .. code-block:: console
 
-     kolla-ansible -i ../../all-in-one deploy
+     kolla-ansible deploy -i all-in-one
 
 When this playbook finishes, OpenStack should be up, running and functional!
 If error occurs during execution, refer to
@@ -318,8 +322,7 @@ Using OpenStack
 
      .. code-block:: console
 
-        cd kolla-ansible/tools
-        ./kolla-ansible post-deploy
+        kolla-ansible post-deploy
 
    * The file will be generated in /etc/kolla/clouds.yaml, you can use it by
      copying it to /etc/openstack or ~/.config/openstack or setting

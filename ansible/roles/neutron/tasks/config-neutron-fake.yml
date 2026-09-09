@@ -1,17 +1,17 @@
 ---
 - name: Ensuring config directories exist
   become: true
-  file:
+  ansible.builtin.file:
     path: "{{ node_config_directory }}/neutron-openvswitch-agent-fake-{{ item }}"
     state: "directory"
-    recurse: yes
+    recurse: true
     mode: "0770"
   with_sequence: start=1 end={{ num_nova_fake_per_node }}
   when: inventory_hostname in groups['compute']
 
 - name: Copying over config.json files for services
   become: true
-  template:
+  ansible.builtin.template:
     src: "neutron-openvswitch-agent.json.j2"
     dest: "{{ node_config_directory }}/neutron-openvswitch-agent-fake-{{ item }}/config.json"
     mode: "0660"
@@ -64,7 +64,7 @@
   vars:
     neutron_openvswitch_agent: "{{ neutron_services['neutron-openvswitch-agent'] }}"
   become: true
-  kolla_docker:
+  kolla_container:
     action: "compare_container"
     common_options: "{{ docker_common_options }}"
     name: "{{ neutron_openvswitch_agent.container_name }}"
@@ -82,9 +82,9 @@
 
 - name: Ensuring config directory has correct owner and permission
   become: true
-  file:
+  ansible.builtin.file:
     path: "{{ node_config_directory }}/neutron-openvswitch-agent-fake-{{ item }}"
-    recurse: yes
+    recurse: true
     owner: "{{ config_owner_user }}"
     group: "{{ config_owner_group }}"
   when: inventory_hostname in groups['compute']
